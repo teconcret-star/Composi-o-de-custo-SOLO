@@ -20,7 +20,7 @@
       background: #fff;
       padding: 20px;
       border-radius: 14px;
-      box-shadow: 0 4px 18px rgba(0,0,0,0.08);
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
     }
 
     h1, h2, h3 {
@@ -74,11 +74,16 @@
       font-weight: bold;
     }
 
-    .actions {
+    .actions,
+    .toolbar,
+    .table-actions {
       display: flex;
       gap: 10px;
       flex-wrap: wrap;
-      margin-top: 15px;
+    }
+
+    .toolbar {
+      margin: 18px 0;
     }
 
     button {
@@ -90,10 +95,22 @@
       font-weight: bold;
     }
 
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .small {
+      padding: 8px 10px;
+      font-size: 12px;
+    }
+
     .primary { background: #1f6feb; color: white; }
     .secondary { background: #2da44e; color: white; }
     .warning { background: #bf8700; color: white; }
     .danger { background: #d1242f; color: white; }
+    .outline { background: white; color: #1f6feb; border: 1px solid #1f6feb; }
+    .ghost { background: #eef3f8; color: #1b3a57; }
 
     .status {
       display: none;
@@ -124,12 +141,52 @@
       color: #8a5a00;
     }
 
+    .current-box,
     .result-box {
       margin-top: 24px;
       padding: 20px;
       border-radius: 12px;
+      border: 1px solid #d9e2ec;
+    }
+
+    .current-box {
+      background: #f8fbff;
+    }
+
+    .current-empty {
+      color: #5b6470;
+      font-size: 14px;
+    }
+
+    .current-summary {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .summary-item {
+      padding: 12px;
+      border-radius: 10px;
+      background: white;
+      border: 1px solid #d9e2ec;
+    }
+
+    .summary-item span {
+      display: block;
+      font-size: 12px;
+      color: #667085;
+      margin-bottom: 4px;
+    }
+
+    .summary-item strong {
+      color: #1b3a57;
+      font-size: 15px;
+    }
+
+    .result-box {
       background: #eef7ee;
-      border: 1px solid #b7dfb9;
+      border-color: #b7dfb9;
     }
 
     .result-grid {
@@ -149,7 +206,7 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 1100px;
+      min-width: 1180px;
     }
 
     th, td {
@@ -157,6 +214,7 @@
       border-bottom: 1px solid #e6edf3;
       text-align: left;
       font-size: 14px;
+      vertical-align: top;
     }
 
     th {
@@ -168,9 +226,77 @@
       color: #666;
     }
 
+    .hidden {
+      display: none !important;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: rgba(15, 23, 42, 0.55);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal {
+      width: min(1100px, 100%);
+      max-height: 90vh;
+      overflow-y: auto;
+      background: white;
+      border-radius: 18px;
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.24);
+      padding: 20px;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+      position: sticky;
+      top: 0;
+      background: white;
+      padding-bottom: 8px;
+      z-index: 2;
+    }
+
+    .modal-actions {
+      position: sticky;
+      bottom: 0;
+      background: white;
+      padding-top: 14px;
+      margin-top: 14px;
+      border-top: 1px solid #e6edf3;
+    }
+
+    @media (max-width: 1100px) {
+      .grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .current-summary {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
     @media (max-width: 900px) {
-      .grid, .grid-2, .result-grid {
+      .grid, .grid-2, .result-grid, .current-summary {
         grid-template-columns: 1fr;
+      }
+
+      .modal-backdrop {
+        padding: 0;
+      }
+
+      .modal {
+        width: 100%;
+        max-height: 100vh;
+        height: 100vh;
+        border-radius: 0;
       }
     }
   </style>
@@ -178,198 +304,21 @@
 <body>
   <div class="container">
     <h1>Calculadora MCC de Concreto</h1>
-    <p class="muted">Cálculo do custo por m³ com frete diluído pela carga entregue.</p>
+    <p class="muted">Preencha as informações nas caixas do lançamento, salve quando desejar e acompanhe o custo final por m³.</p>
 
     <div id="status" class="status"></div>
 
-    <h2 class="section-title">1. Identificação</h2>
-    <div class="grid-2">
-      <div class="card">
-        <label for="nomeObra">Nome da obra</label>
-        <input type="text" id="nomeObra">
-      </div>
-      <div class="card">
-        <label for="cliente">Cliente</label>
-        <input type="text" id="cliente">
-      </div>
-    </div>
-
-    <h2 class="section-title">2. Materiais por m³</h2>
-    <div class="grid">
-      <div class="card">
-        <h3>Cimento</h3>
-        <label for="cimentoKg">Quantidade (kg/m³)</label>
-        <input type="number" id="cimentoKg" step="0.01" value="0">
-        <label for="cimentoPreco">Preço (R$/kg)</label>
-        <input type="number" id="cimentoPreco" step="0.01" value="0">
-      </div>
-
-      <div class="card">
-        <h3>Adição</h3>
-        <label for="adicaoKg">Quantidade (kg/m³)</label>
-        <input type="number" id="adicaoKg" step="0.01" value="0">
-        <label for="adicaoPreco">Preço (R$/kg)</label>
-        <input type="number" id="adicaoPreco" step="0.01" value="0">
-      </div>
-
-      <div class="card">
-        <h3>Fibra 1</h3>
-        <label for="fibra1Kg">Quantidade (kg/m³)</label>
-        <input type="number" id="fibra1Kg" step="0.01" value="0">
-        <label for="fibra1Preco">Preço (R$/kg)</label>
-        <input type="number" id="fibra1Preco" step="0.01" value="0">
-      </div>
-
-      <div class="card">
-        <h3>Fibra 2</h3>
-        <label for="fibra2Kg">Quantidade (kg/m³)</label>
-        <input type="number" id="fibra2Kg" step="0.01" value="0">
-        <label for="fibra2Preco">Preço (R$/kg)</label>
-        <input type="number" id="fibra2Preco" step="0.01" value="0">
-      </div>
-    </div>
-
-    <div class="grid">
-      <div class="card">
-        <h3>Areia 1</h3>
-        <label for="areia1Kg">Quantidade (kg/m³)</label>
-        <input type="number" id="areia1Kg" step="0.01" value="0">
-        <label for="areia1Preco">Preço (R$/kg)</label>
-        <input type="number" id="areia1Preco" step="0.01" value="0">
-      </div>
-
-      <div class="card">
-        <h3>Areia 2</h3>
-        <label for="areia2Kg">Quantidade (kg/m³)</label>
-        <input type="number" id="areia2Kg" step="0.01" value="0">
-        <label for="areia2Preco">Preço (R$/kg)</label>
-        <input type="number" id="areia2Preco" step="0.01" value="0">
-      </div>
-
-      <div class="card">
-        <h3>Areia 3</h3>
-        <label for="areia3Kg">Quantidade (kg/m³)</label>
-        <input type="number" id="areia3Kg" step="0.01" value="0">
-        <label for="areia3Preco">Preço (R$/kg)</label>
-        <input type="number" id="areia3Preco" step="0.01" value="0">
-      </div>
-
-      <div class="card">
-        <h3>Aditivo 1</h3>
-        <label for="aditivo1Kg">Quantidade (kg/m³)</label>
-        <input type="number" id="aditivo1Kg" step="0.01" value="0">
-        <label for="aditivo1Preco">Preço (R$/kg)</label>
-        <input type="number" id="aditivo1Preco" step="0.01" value="0">
-      </div>
-    </div>
-
-    <div class="grid">
-      <div class="card">
-        <h3>Aditivo 2</h3>
-        <label for="aditivo2Kg">Quantidade (kg/m³)</label>
-        <input type="number" id="aditivo2Kg" step="0.01" value="0">
-        <label for="aditivo2Preco">Preço (R$/kg)</label>
-        <input type="number" id="aditivo2Preco" step="0.01" value="0">
-      </div>
-
-      <div class="card">
-        <h3>Aditivo 3</h3>
-        <label for="aditivo3Kg">Quantidade (kg/m³)</label>
-        <input type="number" id="aditivo3Kg" step="0.01" value="0">
-        <label for="aditivo3Preco">Preço (R$/kg)</label>
-        <input type="number" id="aditivo3Preco" step="0.01" value="0">
-      </div>
-
-      <div class="card">
-        <h3>Brita 1</h3>
-        <label for="brita1Kg">Quantidade (kg/m³)</label>
-        <input type="number" id="brita1Kg" step="0.01" value="0">
-        <label for="brita1Preco">Preço (R$/kg)</label>
-        <input type="number" id="brita1Preco" step="0.01" value="0">
-      </div>
-
-      <div class="card">
-        <h3>Brita 2</h3>
-        <label for="brita2Kg">Quantidade (kg/m³)</label>
-        <input type="number" id="brita2Kg" step="0.01" value="0">
-        <label for="brita2Preco">Preço (R$/kg)</label>
-        <input type="number" id="brita2Preco" step="0.01" value="0">
-      </div>
-    </div>
-
-    <div class="grid">
-      <div class="card">
-        <h3>Brita 3</h3>
-        <label for="brita3Kg">Quantidade (kg/m³)</label>
-        <input type="number" id="brita3Kg" step="0.01" value="0">
-        <label for="brita3Preco">Preço (R$/kg)</label>
-        <input type="number" id="brita3Preco" step="0.01" value="0">
-      </div>
-    </div>
-
-    <h2 class="section-title">3. Transporte e entrega</h2>
-    <div class="grid-2">
-      <div class="card">
-        <label for="volumeCaminhao">Volume do caminhão (m³)</label>
-        <input type="number" id="volumeCaminhao" step="0.01" value="0">
-
-        <label for="volumeCarga">Quantidade entregue / carga da viagem (m³)</label>
-        <input type="number" id="volumeCarga" step="0.01" value="0">
-
-        <label for="distancia">Distância até a obra (km)</label>
-        <input type="number" id="distancia" step="0.01" value="0">
-
-        <label for="consumo">Consumo do caminhão (km/l)</label>
-        <input type="number" id="consumo" step="0.01" value="0">
-
-        <label for="precoCombustivel">Preço do combustível (R$/l)</label>
-        <input type="number" id="precoCombustivel" step="0.01" value="0">
-      </div>
-
-      <div class="card">
-        <label for="pedagio">Pedágio total da viagem (R$)</label>
-        <input type="number" id="pedagio" step="0.01" value="0">
-
-        <label for="taxaServico">Taxa de serviço (R$ por viagem)</label>
-        <input type="number" id="taxaServico" step="0.01" value="0">
-
-        <label for="depreciacao">Depreciação do caminhão (R$ por viagem)</label>
-        <input type="number" id="depreciacao" step="0.01" value="0">
-
-        <label for="idaVolta">Considerar ida e volta?</label>
-        <select id="idaVolta">
-          <option value="2">Sim</option>
-          <option value="1">Não</option>
-        </select>
-      </div>
-    </div>
-
-    <h2 class="section-title">4. Imposto e lucro</h2>
-    <div class="grid-2">
-      <div class="card">
-        <label for="imposto">Imposto incidente na NF</label>
-        <select id="imposto">
-          <option value="4">4%</option>
-          <option value="5">5%</option>
-          <option value="6">6%</option>
-          <option value="7">7%</option>
-          <option value="8" selected>8%</option>
-          <option value="9">9%</option>
-          <option value="10">10%</option>
-        </select>
-      </div>
-
-      <div class="card">
-        <label for="lucro">Lucro desejado (%)</label>
-        <input type="number" id="lucro" step="0.01" value="0">
-      </div>
-    </div>
-
-    <div class="actions">
-      <button id="btnCalcular" class="primary" type="button">Calcular custo</button>
-      <button id="btnSalvar" class="secondary" type="button">Salvar</button>
-      <button id="btnLimpar" class="warning" type="button">Limpar formulário</button>
+    <div class="toolbar">
+      <button id="btnNovoLancamento" class="primary" type="button">Lançar informações</button>
+      <button id="btnEditarAtual" class="ghost" type="button" disabled>Reabrir lançamento atual</button>
+      <button id="btnExportarAtual" class="outline" type="button" disabled>Exportar extrato atual</button>
       <button id="btnApagar" class="danger" type="button">Apagar histórico</button>
+    </div>
+
+    <div class="current-box">
+      <h2>Lançamento atual</h2>
+      <p class="muted">Use o botão acima para abrir as caixas de preenchimento. Você pode editar lançamentos salvos e exportar um extrato completo.</p>
+      <div id="resumoLancamento" class="current-empty">Nenhum lançamento calculado até o momento.</div>
     </div>
 
     <div class="result-box">
@@ -410,7 +359,7 @@
       </div>
     </div>
 
-    <h2 class="section-title">5. Histórico</h2>
+    <h2 class="section-title">Histórico</h2>
     <div class="table-wrap">
       <table>
         <thead>
@@ -427,7 +376,7 @@
             <th>Lucro</th>
             <th>Margem</th>
             <th>Final/m³</th>
-            <th>Ação</th>
+            <th>Ações</th>
           </tr>
         </thead>
         <tbody id="tabelaHistorico"></tbody>
@@ -435,10 +384,240 @@
     </div>
   </div>
 
+  <div id="modalBackdrop" class="modal-backdrop hidden" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitulo">
+      <div class="modal-header">
+        <div>
+          <h2 id="modalTitulo">Novo lançamento</h2>
+          <p class="muted">Informe os dados nas caixas abaixo. No final, o sistema calcula o custo e permite salvar, editar e exportar.</p>
+        </div>
+        <button id="btnFecharModal" class="ghost" type="button">Fechar</button>
+      </div>
+
+      <h2 class="section-title">1. Identificação</h2>
+      <div class="grid-2">
+        <div class="card">
+          <label for="nomeObra">Nome da obra</label>
+          <input type="text" id="nomeObra">
+        </div>
+        <div class="card">
+          <label for="cliente">Cliente</label>
+          <input type="text" id="cliente">
+        </div>
+      </div>
+
+      <h2 class="section-title">2. Materiais por m³</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>Cimento</h3>
+          <label for="cimentoKg">Quantidade (kg/m³)</label>
+          <input type="number" id="cimentoKg" step="0.01" value="0">
+          <label for="cimentoPreco">Preço (R$/kg)</label>
+          <input type="number" id="cimentoPreco" step="0.01" value="0">
+        </div>
+
+        <div class="card">
+          <h3>Adição</h3>
+          <label for="adicaoKg">Quantidade (kg/m³)</label>
+          <input type="number" id="adicaoKg" step="0.01" value="0">
+          <label for="adicaoPreco">Preço (R$/kg)</label>
+          <input type="number" id="adicaoPreco" step="0.01" value="0">
+        </div>
+
+        <div class="card">
+          <h3>Fibra 1</h3>
+          <label for="fibra1Kg">Quantidade (kg/m³)</label>
+          <input type="number" id="fibra1Kg" step="0.01" value="0">
+          <label for="fibra1Preco">Preço (R$/kg)</label>
+          <input type="number" id="fibra1Preco" step="0.01" value="0">
+        </div>
+
+        <div class="card">
+          <h3>Fibra 2</h3>
+          <label for="fibra2Kg">Quantidade (kg/m³)</label>
+          <input type="number" id="fibra2Kg" step="0.01" value="0">
+          <label for="fibra2Preco">Preço (R$/kg)</label>
+          <input type="number" id="fibra2Preco" step="0.01" value="0">
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <h3>Areia 1</h3>
+          <label for="areia1Kg">Quantidade (kg/m³)</label>
+          <input type="number" id="areia1Kg" step="0.01" value="0">
+          <label for="areia1Preco">Preço (R$/kg)</label>
+          <input type="number" id="areia1Preco" step="0.01" value="0">
+        </div>
+
+        <div class="card">
+          <h3>Areia 2</h3>
+          <label for="areia2Kg">Quantidade (kg/m³)</label>
+          <input type="number" id="areia2Kg" step="0.01" value="0">
+          <label for="areia2Preco">Preço (R$/kg)</label>
+          <input type="number" id="areia2Preco" step="0.01" value="0">
+        </div>
+
+        <div class="card">
+          <h3>Areia 3</h3>
+          <label for="areia3Kg">Quantidade (kg/m³)</label>
+          <input type="number" id="areia3Kg" step="0.01" value="0">
+          <label for="areia3Preco">Preço (R$/kg)</label>
+          <input type="number" id="areia3Preco" step="0.01" value="0">
+        </div>
+
+        <div class="card">
+          <h3>Aditivo 1</h3>
+          <label for="aditivo1Kg">Quantidade (kg/m³)</label>
+          <input type="number" id="aditivo1Kg" step="0.01" value="0">
+          <label for="aditivo1Preco">Preço (R$/kg)</label>
+          <input type="number" id="aditivo1Preco" step="0.01" value="0">
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <h3>Aditivo 2</h3>
+          <label for="aditivo2Kg">Quantidade (kg/m³)</label>
+          <input type="number" id="aditivo2Kg" step="0.01" value="0">
+          <label for="aditivo2Preco">Preço (R$/kg)</label>
+          <input type="number" id="aditivo2Preco" step="0.01" value="0">
+        </div>
+
+        <div class="card">
+          <h3>Aditivo 3</h3>
+          <label for="aditivo3Kg">Quantidade (kg/m³)</label>
+          <input type="number" id="aditivo3Kg" step="0.01" value="0">
+          <label for="aditivo3Preco">Preço (R$/kg)</label>
+          <input type="number" id="aditivo3Preco" step="0.01" value="0">
+        </div>
+
+        <div class="card">
+          <h3>Brita 1</h3>
+          <label for="brita1Kg">Quantidade (kg/m³)</label>
+          <input type="number" id="brita1Kg" step="0.01" value="0">
+          <label for="brita1Preco">Preço (R$/kg)</label>
+          <input type="number" id="brita1Preco" step="0.01" value="0">
+        </div>
+
+        <div class="card">
+          <h3>Brita 2</h3>
+          <label for="brita2Kg">Quantidade (kg/m³)</label>
+          <input type="number" id="brita2Kg" step="0.01" value="0">
+          <label for="brita2Preco">Preço (R$/kg)</label>
+          <input type="number" id="brita2Preco" step="0.01" value="0">
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <h3>Brita 3</h3>
+          <label for="brita3Kg">Quantidade (kg/m³)</label>
+          <input type="number" id="brita3Kg" step="0.01" value="0">
+          <label for="brita3Preco">Preço (R$/kg)</label>
+          <input type="number" id="brita3Preco" step="0.01" value="0">
+        </div>
+      </div>
+
+      <h2 class="section-title">3. Transporte e entrega</h2>
+      <div class="grid-2">
+        <div class="card">
+          <label for="volumeCaminhao">Volume do caminhão (m³)</label>
+          <input type="number" id="volumeCaminhao" step="0.01" value="0">
+
+          <label for="volumeCarga">Quantidade entregue / carga da viagem (m³)</label>
+          <input type="number" id="volumeCarga" step="0.01" value="0">
+
+          <label for="distancia">Distância até a obra (km)</label>
+          <input type="number" id="distancia" step="0.01" value="0">
+
+          <label for="consumo">Consumo do caminhão (km/l)</label>
+          <input type="number" id="consumo" step="0.01" value="0">
+
+          <label for="precoCombustivel">Preço do combustível (R$/l)</label>
+          <input type="number" id="precoCombustivel" step="0.01" value="0">
+        </div>
+
+        <div class="card">
+          <label for="pedagio">Pedágio total da viagem (R$)</label>
+          <input type="number" id="pedagio" step="0.01" value="0">
+
+          <label for="taxaServico">Taxa de serviço (R$ por viagem)</label>
+          <input type="number" id="taxaServico" step="0.01" value="0">
+
+          <label for="depreciacao">Depreciação do caminhão (R$ por viagem)</label>
+          <input type="number" id="depreciacao" step="0.01" value="0">
+
+          <label for="idaVolta">Considerar ida e volta?</label>
+          <select id="idaVolta">
+            <option value="2">Sim</option>
+            <option value="1">Não</option>
+          </select>
+        </div>
+      </div>
+
+      <h2 class="section-title">4. Imposto e lucro</h2>
+      <div class="grid-2">
+        <div class="card">
+          <label for="imposto">Imposto incidente na NF</label>
+          <select id="imposto">
+            <option value="4">4%</option>
+            <option value="5">5%</option>
+            <option value="6">6%</option>
+            <option value="7">7%</option>
+            <option value="8" selected>8%</option>
+            <option value="9">9%</option>
+            <option value="10">10%</option>
+          </select>
+        </div>
+
+        <div class="card">
+          <label for="lucro">Lucro desejado (%)</label>
+          <input type="number" id="lucro" step="0.01" value="0">
+        </div>
+      </div>
+
+      <div class="actions modal-actions">
+        <button id="btnCalcular" class="primary" type="button">Calcular custo</button>
+        <button id="btnSalvar" class="secondary" type="button">Salvar lançamento</button>
+        <button id="btnLimpar" class="warning" type="button">Limpar formulário</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     var STORAGE_KEY = 'mcc_concreto_historico';
     var storageDisponivel = false;
     var memoriaTemporaria = [];
+    var ultimoCalculo = null;
+    var editandoId = null;
+
+    var CAMPOS_TEXTO = ['nomeObra', 'cliente'];
+    var CAMPOS_NUMERICOS = [
+      'cimentoKg', 'cimentoPreco', 'adicaoKg', 'adicaoPreco', 'fibra1Kg', 'fibra1Preco',
+      'fibra2Kg', 'fibra2Preco', 'areia1Kg', 'areia1Preco', 'areia2Kg', 'areia2Preco',
+      'areia3Kg', 'areia3Preco', 'aditivo1Kg', 'aditivo1Preco', 'aditivo2Kg', 'aditivo2Preco',
+      'aditivo3Kg', 'aditivo3Preco', 'brita1Kg', 'brita1Preco', 'brita2Kg', 'brita2Preco',
+      'brita3Kg', 'brita3Preco', 'volumeCaminhao', 'volumeCarga', 'distancia', 'consumo',
+      'precoCombustivel', 'pedagio', 'taxaServico', 'depreciacao', 'lucro'
+    ];
+    var CAMPOS_SELECT = ['idaVolta', 'imposto'];
+
+    var MATERIAIS_EXTRATO = [
+      { nome: 'Cimento', quantidade: 'cimentoKg', preco: 'cimentoPreco' },
+      { nome: 'Adição', quantidade: 'adicaoKg', preco: 'adicaoPreco' },
+      { nome: 'Fibra 1', quantidade: 'fibra1Kg', preco: 'fibra1Preco' },
+      { nome: 'Fibra 2', quantidade: 'fibra2Kg', preco: 'fibra2Preco' },
+      { nome: 'Areia 1', quantidade: 'areia1Kg', preco: 'areia1Preco' },
+      { nome: 'Areia 2', quantidade: 'areia2Kg', preco: 'areia2Preco' },
+      { nome: 'Areia 3', quantidade: 'areia3Kg', preco: 'areia3Preco' },
+      { nome: 'Aditivo 1', quantidade: 'aditivo1Kg', preco: 'aditivo1Preco' },
+      { nome: 'Aditivo 2', quantidade: 'aditivo2Kg', preco: 'aditivo2Preco' },
+      { nome: 'Aditivo 3', quantidade: 'aditivo3Kg', preco: 'aditivo3Preco' },
+      { nome: 'Brita 1', quantidade: 'brita1Kg', preco: 'brita1Preco' },
+      { nome: 'Brita 2', quantidade: 'brita2Kg', preco: 'brita2Preco' },
+      { nome: 'Brita 3', quantidade: 'brita3Kg', preco: 'brita3Preco' }
+    ];
 
     function testarStorage() {
       try {
@@ -465,14 +644,18 @@
     function valor(id) {
       var el = document.getElementById(id);
       if (!el) return 0;
-      var txt = String(el.value || '0').replace(',', '.');
-      var num = parseFloat(txt);
-      return isNaN(num) ? 0 : num;
+      return parseNumero(el.value);
     }
 
     function texto(id) {
       var el = document.getElementById(id);
       return el ? el.value.trim() : '';
+    }
+
+    function parseNumero(valorInformado) {
+      var txt = String(valorInformado || '0').replace(',', '.');
+      var num = parseFloat(txt);
+      return isNaN(num) ? 0 : num;
     }
 
     function moeda(v) {
@@ -482,7 +665,149 @@
       });
     }
 
+    function numeroBr(v) {
+      return Number(v || 0).toLocaleString('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+    }
+
+    function escaparHtml(textoValor) {
+      return String(textoValor || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function obterPadraoFormulario() {
+      var dados = {};
+      var i;
+
+      for (i = 0; i < CAMPOS_TEXTO.length; i++) {
+        dados[CAMPOS_TEXTO[i]] = '';
+      }
+
+      for (i = 0; i < CAMPOS_NUMERICOS.length; i++) {
+        dados[CAMPOS_NUMERICOS[i]] = '0';
+      }
+
+      dados.idaVolta = '2';
+      dados.imposto = '8';
+      return dados;
+    }
+
+    function capturarEntradas() {
+      var entradas = {};
+      var i;
+      var id;
+
+      for (i = 0; i < CAMPOS_TEXTO.length; i++) {
+        id = CAMPOS_TEXTO[i];
+        entradas[id] = texto(id);
+      }
+
+      for (i = 0; i < CAMPOS_NUMERICOS.length; i++) {
+        id = CAMPOS_NUMERICOS[i];
+        entradas[id] = document.getElementById(id).value || '0';
+      }
+
+      for (i = 0; i < CAMPOS_SELECT.length; i++) {
+        id = CAMPOS_SELECT[i];
+        entradas[id] = document.getElementById(id).value;
+      }
+
+      return entradas;
+    }
+
+    function aplicarEntradas(entradas) {
+      var dados = entradas || obterPadraoFormulario();
+      var i;
+      var id;
+      var el;
+
+      for (i = 0; i < CAMPOS_TEXTO.length; i++) {
+        id = CAMPOS_TEXTO[i];
+        el = document.getElementById(id);
+        el.value = dados[id] || '';
+      }
+
+      for (i = 0; i < CAMPOS_NUMERICOS.length; i++) {
+        id = CAMPOS_NUMERICOS[i];
+        el = document.getElementById(id);
+        el.value = dados[id] != null && dados[id] !== '' ? dados[id] : '0';
+      }
+
+      for (i = 0; i < CAMPOS_SELECT.length; i++) {
+        id = CAMPOS_SELECT[i];
+        el = document.getElementById(id);
+        el.value = dados[id] || obterPadraoFormulario()[id];
+      }
+    }
+
+    function limparResultadosVisuais() {
+      document.getElementById('resultadoMateriais').value = '';
+      document.getElementById('resultadoViagem').value = '';
+      document.getElementById('resultadoEntrega').value = '';
+      document.getElementById('resultadoBase').value = '';
+      document.getElementById('resultadoImposto').value = '';
+      document.getElementById('resultadoLucro').value = '';
+      document.getElementById('resultadoMargem').value = '';
+      document.getElementById('resultadoFinal').value = '';
+    }
+
+    function atualizarEstadoAtual() {
+      document.getElementById('btnEditarAtual').disabled = !ultimoCalculo || !ultimoCalculo.entradas;
+      document.getElementById('btnExportarAtual').disabled = !ultimoCalculo;
+    }
+
+    function atualizarResumoAtual() {
+      var resumo = document.getElementById('resumoLancamento');
+
+      if (!ultimoCalculo) {
+        resumo.className = 'current-empty';
+        resumo.innerHTML = 'Nenhum lançamento calculado até o momento.';
+        atualizarEstadoAtual();
+        return;
+      }
+
+      resumo.className = 'current-summary';
+      resumo.innerHTML =
+        '<div class="summary-item"><span>Obra</span><strong>' + escaparHtml(ultimoCalculo.nomeObra || 'Não informada') + '</strong></div>' +
+        '<div class="summary-item"><span>Cliente</span><strong>' + escaparHtml(ultimoCalculo.cliente || 'Não informado') + '</strong></div>' +
+        '<div class="summary-item"><span>Carga da viagem</span><strong>' + numeroBr(ultimoCalculo.volumeCarga || 0) + ' m³</strong></div>' +
+        '<div class="summary-item"><span>Custo final por m³</span><strong>' + moeda(ultimoCalculo.custoFinal || 0) + '</strong></div>';
+
+      atualizarEstadoAtual();
+    }
+
+    function abrirModal() {
+      document.getElementById('modalBackdrop').classList.remove('hidden');
+      document.getElementById('modalBackdrop').setAttribute('aria-hidden', 'false');
+      document.getElementById('nomeObra').focus();
+    }
+
+    function fecharModal() {
+      document.getElementById('modalBackdrop').classList.add('hidden');
+      document.getElementById('modalBackdrop').setAttribute('aria-hidden', 'true');
+    }
+
+    function atualizarModoFormulario() {
+      document.getElementById('modalTitulo').textContent = editandoId ? 'Editar lançamento salvo' : 'Novo lançamento';
+      document.getElementById('btnSalvar').textContent = editandoId ? 'Salvar alterações' : 'Salvar lançamento';
+    }
+
+    function novoLancamento() {
+      editandoId = null;
+      aplicarEntradas(obterPadraoFormulario());
+      atualizarModoFormulario();
+      abrirModal();
+      mostrarStatus('Preencha as informações nas caixas e clique em calcular.', 'ok');
+    }
+
     function calcularDados() {
+      var entradas = capturarEntradas();
       var materiais =
         valor('cimentoKg') * valor('cimentoPreco') +
         valor('adicaoKg') * valor('adicaoPreco') +
@@ -538,18 +863,22 @@
       return {
         id: Date.now(),
         dataHora: new Date().toLocaleString('pt-BR'),
-        nomeObra: texto('nomeObra'),
-        cliente: texto('cliente'),
+        nomeObra: entradas.nomeObra,
+        cliente: entradas.cliente,
         volumeCarga: volumeCarga,
         materiais: materiais,
+        litrosConsumidos: litrosConsumidos,
+        custoCombustivel: custoCombustivel,
         custoViagem: custoViagem,
         custoEntrega: custoEntrega,
         custoBase: custoBase,
         impostoPerc: impostoPerc * 100,
         valorImposto: valorImposto,
+        lucroPerc: lucroPerc * 100,
         valorLucro: valorLucro,
         margem: margem,
-        custoFinal: custoFinal
+        custoFinal: custoFinal,
+        entradas: entradas
       };
     }
 
@@ -569,6 +898,8 @@
         limparStatus();
         var dados = calcularDados();
         preencherResultados(dados);
+        ultimoCalculo = dados;
+        atualizarResumoAtual();
         mostrarStatus('Cálculo realizado com sucesso.', 'ok');
         return dados;
       } catch (e) {
@@ -600,32 +931,118 @@
       }
     }
 
+    function obterItemPorId(id) {
+      var historico = obterHistorico();
+      for (var i = 0; i < historico.length; i++) {
+        if (historico[i].id === id) {
+          return historico[i];
+        }
+      }
+      return null;
+    }
+
     function salvarNaTabela() {
       try {
         var dados = calcular();
         if (!dados) return;
 
         var historico = obterHistorico();
-        historico.push(dados);
-        salvarHistorico(historico);
-        renderizarHistorico();
+        var mensagemSucesso;
+        var i;
+        var encontrou = false;
 
-        if (storageDisponivel) {
-          mostrarStatus('Cálculo salvo localmente e incluído na tabela.', 'ok');
+        if (editandoId) {
+          for (i = 0; i < historico.length; i++) {
+            if (historico[i].id === editandoId) {
+              dados.id = editandoId;
+              historico[i] = dados;
+              encontrou = true;
+              break;
+            }
+          }
+
+          if (!encontrou) {
+            throw new Error('O lançamento em edição não foi encontrado no histórico.');
+          }
+
+          mensagemSucesso = 'Lançamento atualizado com sucesso.';
         } else {
-          mostrarStatus('Cálculo incluído na tabela, mas sem persistência local neste modo de abertura.', 'warn');
+          historico.push(dados);
+          mensagemSucesso = storageDisponivel
+            ? 'Cálculo salvo localmente e incluído no histórico.'
+            : 'Cálculo incluído no histórico, mas sem persistência local neste modo de abertura.';
         }
+
+        salvarHistorico(historico);
+        ultimoCalculo = dados;
+        atualizarResumoAtual();
+        renderizarHistorico();
+        editandoId = dados.id;
+        atualizarModoFormulario();
+        fecharModal();
+        mostrarStatus(mensagemSucesso, storageDisponivel ? 'ok' : 'warn');
       } catch (e) {
-        mostrarStatus('Erro ao salvar na tabela: ' + e.message, 'error');
+        mostrarStatus('Erro ao salvar no histórico: ' + e.message, 'error');
       }
+    }
+
+    function editarItem(id) {
+      var item = obterItemPorId(id);
+      if (!item) {
+        mostrarStatus('Lançamento não encontrado.', 'error');
+        return;
+      }
+
+      if (!item.entradas) {
+        mostrarStatus('Este lançamento antigo não possui as informações detalhadas necessárias para edição.', 'warn');
+        return;
+      }
+
+      editandoId = id;
+      aplicarEntradas(item.entradas);
+      preencherResultados(item);
+      ultimoCalculo = item;
+      atualizarResumoAtual();
+      atualizarModoFormulario();
+      abrirModal();
+      mostrarStatus('Revise as informações nas caixas e salve as alterações.', 'ok');
+    }
+
+    function reabrirLancamentoAtual() {
+      if (!ultimoCalculo || !ultimoCalculo.entradas) {
+        mostrarStatus('Não há lançamento atual com detalhes para reabrir.', 'warn');
+        return;
+      }
+
+      editandoId = ultimoCalculo.id || null;
+      aplicarEntradas(ultimoCalculo.entradas);
+      atualizarModoFormulario();
+      abrirModal();
     }
 
     function excluirItem(id) {
       var historico = obterHistorico().filter(function(item) {
         return item.id !== id;
       });
+
       salvarHistorico(historico);
       renderizarHistorico();
+
+      if (ultimoCalculo && ultimoCalculo.id === id) {
+        ultimoCalculo = historico.length ? historico[historico.length - 1] : null;
+        if (ultimoCalculo) {
+          preencherResultados(ultimoCalculo);
+        } else {
+          limparResultadosVisuais();
+        }
+        atualizarResumoAtual();
+      }
+
+      if (editandoId === id) {
+        editandoId = null;
+        atualizarModoFormulario();
+      }
+
       mostrarStatus('Item excluído com sucesso.', 'ok');
     }
 
@@ -640,8 +1057,95 @@
       }
 
       memoriaTemporaria = [];
+      ultimoCalculo = null;
+      editandoId = null;
+      atualizarModoFormulario();
+      atualizarResumoAtual();
+      limparResultadosVisuais();
       renderizarHistorico();
       mostrarStatus('Histórico apagado com sucesso.', 'ok');
+    }
+
+    function exportarExtrato(id) {
+      var item = id ? obterItemPorId(id) : ultimoCalculo;
+      if (!item) {
+        mostrarStatus('Nenhum lançamento disponível para exportação.', 'warn');
+        return;
+      }
+
+      var conteudo = gerarExtratoTexto(item);
+      var blob = new Blob([conteudo], { type: 'text/plain;charset=utf-8' });
+      var link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = gerarNomeArquivo(item);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(link.href);
+      mostrarStatus('Extrato exportado com sucesso.', 'ok');
+    }
+
+    function gerarNomeArquivo(item) {
+      var base = (item.nomeObra || 'extrato-mcc').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      base = base.replace(/^-+|-+$/g, '');
+      if (!base) base = 'extrato-mcc';
+      return base + '.txt';
+    }
+
+    function gerarExtratoTexto(item) {
+      var entradas = item.entradas || {};
+      var linhas = [
+        'EXTRATO DE CUSTO MCC DE CONCRETO',
+        '',
+        'Data: ' + (item.dataHora || ''),
+        'Obra: ' + (item.nomeObra || ''),
+        'Cliente: ' + (item.cliente || ''),
+        '',
+        'IDENTIFICAÇÃO E TRANSPORTE',
+        'Volume do caminhão: ' + numeroBr(parseNumero(entradas.volumeCaminhao)) + ' m³',
+        'Carga da viagem: ' + numeroBr(item.volumeCarga || parseNumero(entradas.volumeCarga)) + ' m³',
+        'Distância até a obra: ' + numeroBr(parseNumero(entradas.distancia)) + ' km',
+        'Consumo do caminhão: ' + numeroBr(parseNumero(entradas.consumo)) + ' km/l',
+        'Preço do combustível: ' + moeda(parseNumero(entradas.precoCombustivel)),
+        'Pedágio: ' + moeda(parseNumero(entradas.pedagio)),
+        'Taxa de serviço: ' + moeda(parseNumero(entradas.taxaServico)),
+        'Depreciação: ' + moeda(parseNumero(entradas.depreciacao)),
+        'Ida e volta: ' + (String(entradas.idaVolta || '2') === '2' ? 'Sim' : 'Não'),
+        '',
+        'MATERIAIS POR m³'
+      ];
+
+      for (var i = 0; i < MATERIAIS_EXTRATO.length; i++) {
+        var material = MATERIAIS_EXTRATO[i];
+        linhas.push(
+          material.nome + ': ' +
+          numeroBr(parseNumero(entradas[material.quantidade])) + ' kg/m³ x ' +
+          moeda(parseNumero(entradas[material.preco])) + '/kg'
+        );
+      }
+
+      linhas = linhas.concat([
+        '',
+        'ENCARGOS E RESULTADO',
+        'Imposto aplicado: ' + numeroBr(item.impostoPerc || parseNumero(entradas.imposto)) + '%',
+        'Lucro desejado: ' + numeroBr(item.lucroPerc || parseNumero(entradas.lucro)) + '%',
+        'Materiais por m³: ' + moeda(item.materiais),
+        'Litros consumidos: ' + numeroBr(item.litrosConsumidos || 0) + ' l',
+        'Custo do combustível: ' + moeda(item.custoCombustivel || 0),
+        'Custo da viagem: ' + moeda(item.custoViagem),
+        'Custo de entrega por m³: ' + moeda(item.custoEntrega),
+        'Custo base por m³: ' + moeda(item.custoBase),
+        'Valor do imposto por m³: ' + moeda(item.valorImposto),
+        'Valor do lucro por m³: ' + moeda(item.valorLucro),
+        'Margem final: ' + numeroBr(item.margem) + '%',
+        'CUSTO FINAL / PREÇO DE VENDA POR m³: ' + moeda(item.custoFinal)
+      ]);
+
+      if (!item.entradas) {
+        linhas.push('', 'Observação: este lançamento foi salvo em uma versão antiga e não possui o detalhamento completo das entradas.');
+      }
+
+      return linhas.join('\n');
     }
 
     function renderizarHistorico() {
@@ -650,56 +1154,89 @@
 
       tbody.innerHTML = '';
 
+      if (!historico.length) {
+        var trVazio = document.createElement('tr');
+        trVazio.innerHTML = '<td colspan="13" class="muted">Nenhum lançamento salvo.</td>';
+        tbody.appendChild(trVazio);
+        return;
+      }
+
       for (var i = 0; i < historico.length; i++) {
         var item = historico[i];
         var tr = document.createElement('tr');
+        var botaoEditar = item.entradas
+          ? '<button class="primary small" type="button" onclick="editarItem(' + item.id + ')">Editar</button>'
+          : '<button class="primary small" type="button" disabled>Editar</button>';
 
         tr.innerHTML =
-          '<td>' + (item.dataHora || '') + '</td>' +
-          '<td>' + (item.nomeObra || '') + '</td>' +
-          '<td>' + (item.cliente || '') + '</td>' +
-          '<td>' + Number(item.volumeCarga || 0).toFixed(2) + '</td>' +
+          '<td>' + escaparHtml(item.dataHora || '') + '</td>' +
+          '<td>' + escaparHtml(item.nomeObra || '') + '</td>' +
+          '<td>' + escaparHtml(item.cliente || '') + '</td>' +
+          '<td>' + numeroBr(item.volumeCarga || 0) + '</td>' +
           '<td>' + moeda(item.materiais) + '</td>' +
           '<td>' + moeda(item.custoViagem) + '</td>' +
           '<td>' + moeda(item.custoEntrega) + '</td>' +
           '<td>' + moeda(item.custoBase) + '</td>' +
-          '<td>' + Number(item.impostoPerc || 0).toFixed(2) + '%</td>' +
+          '<td>' + numeroBr(item.impostoPerc || 0) + '%</td>' +
           '<td>' + moeda(item.valorLucro) + '</td>' +
-          '<td>' + Number(item.margem || 0).toFixed(2) + '%</td>' +
+          '<td>' + numeroBr(item.margem || 0) + '%</td>' +
           '<td>' + moeda(item.custoFinal) + '</td>' +
-          '<td><button class="danger" type="button" onclick="excluirItem(' + item.id + ')">Excluir</button></td>';
+          '<td><div class="table-actions">' +
+            botaoEditar +
+            '<button class="outline small" type="button" onclick="exportarExtrato(' + item.id + ')">Extrato</button>' +
+            '<button class="danger small" type="button" onclick="excluirItem(' + item.id + ')">Excluir</button>' +
+          '</div></td>';
 
         tbody.appendChild(tr);
       }
     }
 
-    function limparCampos() {
-      var inputs = document.querySelectorAll('input');
-
-      for (var i = 0; i < inputs.length; i++) {
-        if (inputs[i].hasAttribute('readonly')) {
-          inputs[i].value = '';
-        } else if (inputs[i].type === 'number') {
-          inputs[i].value = '0';
-        } else {
-          inputs[i].value = '';
-        }
-      }
-
-      document.getElementById('imposto').value = '8';
-      document.getElementById('idaVolta').value = '2';
-      limparStatus();
+    function limparFormulario() {
+      editandoId = null;
+      aplicarEntradas(obterPadraoFormulario());
+      atualizarModoFormulario();
+      mostrarStatus('Formulário limpo. Informe novos dados nas caixas.', 'ok');
     }
+
+    window.editarItem = editarItem;
+    window.excluirItem = excluirItem;
+    window.exportarExtrato = exportarExtrato;
 
     window.onload = function() {
       storageDisponivel = testarStorage();
 
+      document.getElementById('btnNovoLancamento').onclick = novoLancamento;
+      document.getElementById('btnEditarAtual').onclick = reabrirLancamentoAtual;
+      document.getElementById('btnExportarAtual').onclick = function() { exportarExtrato(); };
       document.getElementById('btnCalcular').onclick = calcular;
       document.getElementById('btnSalvar').onclick = salvarNaTabela;
-      document.getElementById('btnLimpar').onclick = limparCampos;
+      document.getElementById('btnLimpar').onclick = limparFormulario;
       document.getElementById('btnApagar').onclick = apagarHistorico;
+      document.getElementById('btnFecharModal').onclick = fecharModal;
+      document.getElementById('modalBackdrop').onclick = function(evento) {
+        if (evento.target === this) {
+          fecharModal();
+        }
+      };
+
+      document.addEventListener('keydown', function(evento) {
+        if (evento.key === 'Escape' && !document.getElementById('modalBackdrop').classList.contains('hidden')) {
+          fecharModal();
+        }
+      });
 
       renderizarHistorico();
+      atualizarModoFormulario();
+
+      var historico = obterHistorico();
+      if (historico.length) {
+        ultimoCalculo = historico[historico.length - 1];
+        preencherResultados(ultimoCalculo);
+      } else {
+        limparResultadosVisuais();
+      }
+
+      atualizarResumoAtual();
 
       if (storageDisponivel) {
         mostrarStatus('Aplicação carregada com armazenamento local ativo.', 'ok');
