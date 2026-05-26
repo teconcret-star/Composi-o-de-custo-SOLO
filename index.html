@@ -715,7 +715,9 @@
           return [];
         }
       }
-      return memoriaTemporaria[chave === COMPOSICAO_STORAGE_KEY ? 'historico' : 'usinas'];
+      if (chave === COMPOSICAO_STORAGE_KEY) return memoriaTemporaria.historico;
+      if (chave === USINAS_STORAGE_KEY) return memoriaTemporaria.usinas;
+      return [];
     }
 
     function salvarLista(chave, lista) {
@@ -1126,6 +1128,9 @@
 
     function renderizarExtrato(dados) {
       var linhasMateriais = '';
+      var impostoExtrato = dados.tributacao && dados.tributacao.impostoPerc != null
+        ? dados.tributacao.impostoPerc
+        : dados.impostoPerc;
       for (var i = 0; i < dados.materiaisDetalhados.length; i++) {
         var item = dados.materiaisDetalhados[i];
         linhasMateriais +=
@@ -1160,7 +1165,7 @@
         '</div>' +
         '<h3>Imposto, lucro e resultados</h3>' +
         '<div class="summary-grid">' +
-          '<div class="summary-item"><strong>Imposto</strong><span>' + numero(dados.impostoPerc) + '%</span></div>' +
+          '<div class="summary-item"><strong>Imposto</strong><span>' + numero(impostoExtrato) + '%</span></div>' +
           '<div class="summary-item"><strong>Lucro desejado</strong><span>' + numero(dados.tributacao.lucroPerc) + '%</span></div>' +
           '<div class="summary-item"><strong>Custo dos materiais</strong><span>' + moeda(dados.materiais) + '</span></div>' +
           '<div class="summary-item"><strong>Custo da viagem</strong><span>' + moeda(dados.custoViagem) + '</span></div>' +
@@ -1246,7 +1251,10 @@
       document.getElementById('taxaServico').value = Number(dados.transporte.taxaServico || 0);
       document.getElementById('depreciacao').value = Number(dados.transporte.depreciacao || 0);
       document.getElementById('idaVolta').value = String(dados.transporte.idaVolta || 2);
-      document.getElementById('imposto').value = String(dados.impostoPerc || 8);
+      var impostoSelecionado = dados.tributacao && dados.tributacao.impostoPerc != null
+        ? dados.tributacao.impostoPerc
+        : dados.impostoPerc;
+      document.getElementById('imposto').value = String(impostoSelecionado || 8);
       document.getElementById('lucro').value = Number((dados.tributacao && dados.tributacao.lucroPerc) || 0);
       atualizarPainelResumo();
     }
