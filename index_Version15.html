@@ -384,7 +384,7 @@
     </div>
   </div>
 
-  <div id="modalBackdrop" class="modal-backdrop hidden" aria-hidden="true">
+  <div id="modalBackdrop" class="modal-backdrop hidden" aria-hidden="true" role="presentation">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitulo">
       <div class="modal-header">
         <div>
@@ -1086,7 +1086,11 @@
     }
 
     function gerarNomeArquivo(item) {
-      var base = (item.nomeObra || 'extrato-mcc').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      var nomeBase = String(item.nomeObra || 'extrato-mcc')
+        .normalize('NFD')
+        .replace(/[̀-ͯ]/g, '')
+        .toLowerCase();
+      var base = nomeBase.replace(/[^a-z0-9]+/g, '-');
       base = base.replace(/^-+|-+$/g, '');
       if (!base) base = 'extrato-mcc';
       return base + '.txt';
