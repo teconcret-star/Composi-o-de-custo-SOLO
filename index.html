@@ -1355,18 +1355,22 @@
       var botoesAnterior = document.querySelectorAll('[data-prev]');
 
       for (var i = 0; i < botoesProximo.length; i++) {
-        botoesProximo[i].onclick = function() {
-          if (!validarEtapa(etapaAtual)) return;
-          limparStatus();
-          irParaEtapa(Number(this.getAttribute('data-next')));
-        };
+        (function(botao) {
+          botao.onclick = function() {
+            if (!validarEtapa(etapaAtual)) return;
+            limparStatus();
+            irParaEtapa(Number(botao.getAttribute('data-next')));
+          };
+        })(botoesProximo[i]);
       }
 
       for (var j = 0; j < botoesAnterior.length; j++) {
-        botoesAnterior[j].onclick = function() {
-          limparStatus();
-          irParaEtapa(Number(this.getAttribute('data-prev')));
-        };
+        (function(botao) {
+          botao.onclick = function() {
+            limparStatus();
+            irParaEtapa(Number(botao.getAttribute('data-prev')));
+          };
+        })(botoesAnterior[j]);
       }
     }
 
