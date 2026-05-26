@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calculadora MCC de Concreto</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f4f6f9;
+      color: #222;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 20px auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 14px;
+      box-shadow: 0 4px 18px rgba(0,0,0,0.08);
+    }
+
+    h1, h2, h3 {
+      color: #1b3a57;
+      margin-top: 0;
+    }
+
+    .section-title {
+      margin: 28px 0 12px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #e6edf3;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    .card {
+      border: 1px solid #d9e2ec;
+      border-radius: 12px;
+      padding: 16px;
+      background: #fafcff;
+    }
+
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: bold;
+      margin-bottom: 6px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 10px;
+      border: 1px solid #b8c4d0;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+
+    input[readonly] {
+      background: #eef3f8;
+      font-weight: bold;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 15px;
+    }
+
+    button {
+      border: none;
+      border-radius: 10px;
+      padding: 12px 16px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    .primary { background: #1f6feb; color: white; }
+    .secondary { background: #2da44e; color: white; }
+    .warning { background: #bf8700; color: white; }
+    .danger { background: #d1242f; color: white; }
+
+    .status {
+      display: none;
+      padding: 12px;
+      margin-top: 12px;
+      border-radius: 10px;
+      font-size: 14px;
+    }
+
+    .status.ok {
+      display: block;
+      background: #edf8ed;
+      border: 1px solid #bde2bd;
+      color: #1f5f1f;
+    }
+
+    .status.error {
+      display: block;
+      background: #fff1f1;
+      border: 1px solid #efb8b8;
+      color: #9b1c1c;
+    }
+
+    .status.warn {
+      display: block;
+      background: #fff8e8;
+      border: 1px solid #f1d28a;
+      color: #8a5a00;
+    }
+
+    .result-box {
+      margin-top: 24px;
+      padding: 20px;
+      border-radius: 12px;
+      background: #eef7ee;
+      border: 1px solid #b7dfb9;
+    }
+
+    .result-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .table-wrap {
+      margin-top: 20px;
+      overflow-x: auto;
+      border: 1px solid #d9e2ec;
+      border-radius: 12px;
+      background: white;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 1100px;
+    }
+
+    th, td {
+      padding: 10px;
+      border-bottom: 1px solid #e6edf3;
+      text-align: left;
+      font-size: 14px;
+    }
+
+    th {
+      background: #f2f6fa;
+    }
+
+    .muted {
+      font-size: 12px;
+      color: #666;
+    }
+
+    @media (max-width: 900px) {
+      .grid, .grid-2, .result-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Calculadora MCC de Concreto</h1>
+    <p class="muted">Cálculo do custo por m³ com frete diluído pela carga entregue.</p>
+
+    <div id="status" class="status"></div>
+
+    <h2 class="section-title">1. Identificação</h2>
+    <div class="grid-2">
+      <div class="card">
+        <label for="nomeObra">Nome da obra</label>
+        <input type="text" id="nomeObra">
+      </div>
+      <div class="card">
+        <label for="cliente">Cliente</label>
+        <input type="text" id="cliente">
+      </div>
+    </div>
+
+    <h2 class="section-title">2. Materiais por m³</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>Cimento</h3>
+        <label for="cimentoKg">Quantidade (kg/m³)</label>
+        <input type="number" id="cimentoKg" step="0.01" value="0">
+        <label for="cimentoPreco">Preço (R$/kg)</label>
+        <input type="number" id="cimentoPreco" step="0.01" value="0">
+      </div>
+
+      <div class="card">
+        <h3>Adição</h3>
+        <label for="adicaoKg">Quantidade (kg/m³)</label>
+        <input type="number" id="adicaoKg" step="0.01" value="0">
+        <label for="adicaoPreco">Preço (R$/kg)</label>
+        <input type="number" id="adicaoPreco" step="0.01" value="0">
+      </div>
+
+      <div class="card">
+        <h3>Fibra 1</h3>
+        <label for="fibra1Kg">Quantidade (kg/m³)</label>
+        <input type="number" id="fibra1Kg" step="0.01" value="0">
+        <label for="fibra1Preco">Preço (R$/kg)</label>
+        <input type="number" id="fibra1Preco" step="0.01" value="0">
+      </div>
+
+      <div class="card">
+        <h3>Fibra 2</h3>
+        <label for="fibra2Kg">Quantidade (kg/m³)</label>
+        <input type="number" id="fibra2Kg" step="0.01" value="0">
+        <label for="fibra2Preco">Preço (R$/kg)</label>
+        <input type="number" id="fibra2Preco" step="0.01" value="0">
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <h3>Areia 1</h3>
+        <label for="areia1Kg">Quantidade (kg/m³)</label>
+        <input type="number" id="areia1Kg" step="0.01" value="0">
+        <label for="areia1Preco">Preço (R$/kg)</label>
+        <input type="number" id="areia1Preco" step="0.01" value="0">
+      </div>
+
+      <div class="card">
+        <h3>Areia 2</h3>
+        <label for="areia2Kg">Quantidade (kg/m³)</label>
+        <input type="number" id="areia2Kg" step="0.01" value="0">
+        <label for="areia2Preco">Preço (R$/kg)</label>
+        <input type="number" id="areia2Preco" step="0.01" value="0">
+      </div>
+
+      <div class="card">
+        <h3>Areia 3</h3>
+        <label for="areia3Kg">Quantidade (kg/m³)</label>
+        <input type="number" id="areia3Kg" step="0.01" value="0">
+        <label for="areia3Preco">Preço (R$/kg)</label>
+        <input type="number" id="areia3Preco" step="0.01" value="0">
+      </div>
+
+      <div class="card">
+        <h3>Aditivo 1</h3>
+        <label for="aditivo1Kg">Quantidade (kg/m³)</label>
+        <input type="number" id="aditivo1Kg" step="0.01" value="0">
+        <label for="aditivo1Preco">Preço (R$/kg)</label>
+        <input type="number" id="aditivo1Preco" step="0.01" value="0">
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <h3>Aditivo 2</h3>
+        <label for="aditivo2Kg">Quantidade (kg/m³)</label>
+        <input type="number" id="aditivo2Kg" step="0.01" value="0">
+        <label for="aditivo2Preco">Preço (R$/kg)</label>
+        <input type="number" id="aditivo2Preco" step="0.01" value="0">
+      </div>
+
+      <div class="card">
+        <h3>Aditivo 3</h3>
+        <label for="aditivo3Kg">Quantidade (kg/m³)</label>
+        <input type="number" id="aditivo3Kg" step="0.01" value="0">
+        <label for="aditivo3Preco">Preço (R$/kg)</label>
+        <input type="number" id="aditivo3Preco" step="0.01" value="0">
+      </div>
+
+      <div class="card">
+        <h3>Brita 1</h3>
+        <label for="brita1Kg">Quantidade (kg/m³)</label>
+        <input type="number" id="brita1Kg" step="0.01" value="0">
+        <label for="brita1Preco">Preço (R$/kg)</label>
+        <input type="number" id="brita1Preco" step="0.01" value="0">
+      </div>
+
+      <div class="card">
+        <h3>Brita 2</h3>
+        <label for="brita2Kg">Quantidade (kg/m³)</label>
+        <input type="number" id="brita2Kg" step="0.01" value="0">
+        <label for="brita2Preco">Preço (R$/kg)</label>
+        <input type="number" id="brita2Preco" step="0.01" value="0">
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <h3>Brita 3</h3>
+        <label for="brita3Kg">Quantidade (kg/m³)</label>
+        <input type="number" id="brita3Kg" step="0.01" value="0">
+        <label for="brita3Preco">Preço (R$/kg)</label>
+        <input type="number" id="brita3Preco" step="0.01" value="0">
+      </div>
+    </div>
+
+    <h2 class="section-title">3. Transporte e entrega</h2>
+    <div class="grid-2">
+      <div class="card">
+        <label for="volumeCaminhao">Volume do caminhão (m³)</label>
+        <input type="number" id="volumeCaminhao" step="0.01" value="0">
+
+        <label for="volumeCarga">Quantidade entregue / carga da viagem (m³)</label>
+        <input type="number" id="volumeCarga" step="0.01" value="0">
+
+        <label for="distancia">Distância até a obra (km)</label>
+        <input type="number" id="distancia" step="0.01" value="0">
+
+        <label for="consumo">Consumo do caminhão (km/l)</label>
+        <input type="number" id="consumo" step="0.01" value="0">
+
+        <label for="precoCombustivel">Preço do combustível (R$/l)</label>
+        <input type="number" id="precoCombustivel" step="0.01" value="0">
+      </div>
+
+      <div class="card">
+        <label for="pedagio">Pedágio total da viagem (R$)</label>
+        <input type="number" id="pedagio" step="0.01" value="0">
+
+        <label for="taxaServico">Taxa de serviço (R$ por viagem)</label>
+        <input type="number" id="taxaServico" step="0.01" value="0">
+
+        <label for="depreciacao">Depreciação do caminhão (R$ por viagem)</label>
+        <input type="number" id="depreciacao" step="0.01" value="0">
+
+        <label for="idaVolta">Considerar ida e volta?</label>
+        <select id="idaVolta">
+          <option value="2">Sim</option>
+          <option value="1">Não</option>
+        </select>
+      </div>
+    </div>
+
+    <h2 class="section-title">4. Imposto e lucro</h2>
+    <div class="grid-2">
+      <div class="card">
+        <label for="imposto">Imposto incidente na NF</label>
+        <select id="imposto">
+          <option value="4">4%</option>
+          <option value="5">5%</option>
+          <option value="6">6%</option>
+          <option value="7">7%</option>
+          <option value="8" selected>8%</option>
+          <option value="9">9%</option>
+          <option value="10">10%</option>
+        </select>
+      </div>
+
+      <div class="card">
+        <label for="lucro">Lucro desejado (%)</label>
+        <input type="number" id="lucro" step="0.01" value="0">
+      </div>
+    </div>
+
+    <div class="actions">
+      <button id="btnCalcular" class="primary" type="button">Gerar custo final</button>
+      <button id="btnSalvar" class="secondary" type="button">Salvar na tabela</button>
+      <button id="btnLimpar" class="warning" type="button">Limpar formulário</button>
+      <button id="btnApagar" class="danger" type="button">Apagar histórico</button>
+    </div>
+
+    <div class="result-box">
+      <h2>Resultado</h2>
+      <div class="result-grid">
+        <div>
+          <label>Custo dos materiais por m³</label>
+          <input type="text" id="resultadoMateriais" readonly>
+        </div>
+        <div>
+          <label>Custo da viagem</label>
+          <input type="text" id="resultadoViagem" readonly>
+        </div>
+        <div>
+          <label>Custo de entrega por m³</label>
+          <input type="text" id="resultadoEntrega" readonly>
+        </div>
+        <div>
+          <label>Custo base total por m³</label>
+          <input type="text" id="resultadoBase" readonly>
+        </div>
+        <div>
+          <label>Valor do imposto por m³</label>
+          <input type="text" id="resultadoImposto" readonly>
+        </div>
+        <div>
+          <label>Valor do lucro por m³</label>
+          <input type="text" id="resultadoLucro" readonly>
+        </div>
+        <div>
+          <label>Margem (%)</label>
+          <input type="text" id="resultadoMargem" readonly>
+        </div>
+        <div>
+          <label>Custo final / preço de venda por m³</label>
+          <input type="text" id="resultadoFinal" readonly>
+        </div>
+      </div>
+    </div>
+
+    <h2 class="section-title">5. Histórico</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Obra</th>
+            <th>Cliente</th>
+            <th>Carga</th>
+            <th>Materiais/m³</th>
+            <th>Viagem</th>
+            <th>Entrega/m³</th>
+            <th>Base/m³</th>
+            <th>Imposto</th>
+            <th>Lucro</th>
+            <th>Margem</th>
+            <th>Final/m³</th>
+            <th>Ação</th>
+          </tr>
+        </thead>
+        <tbody id="tabelaHistorico"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    var STORAGE_KEY = 'mcc_concreto_historico';
+    var storageDisponivel = false;
+    var memoriaTemporaria = [];
+
+    function testarStorage() {
+      try {
+        localStorage.setItem('__teste__', '1');
+        localStorage.removeItem('__teste__');
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    function mostrarStatus(msg, tipo) {
+      var status = document.getElementById('status');
+      status.textContent = msg;
+      status.className = 'status ' + tipo;
+    }
+
+    function limparStatus() {
+      var status = document.getElementById('status');
+      status.textContent = '';
+      status.className = 'status';
+    }
+
+    function valor(id) {
+      var el = document.getElementById(id);
+      if (!el) return 0;
+      var txt = String(el.value || '0').replace(',', '.');
+      var num = parseFloat(txt);
+      return isNaN(num) ? 0 : num;
+    }
+
+    function texto(id) {
+      var el = document.getElementById(id);
+      return el ? el.value.trim() : '';
+    }
+
+    function moeda(v) {
+      return Number(v || 0).toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+      });
+    }
+
+    function calcularDados() {
+      var materiais =
+        valor('cimentoKg') * valor('cimentoPreco') +
+        valor('adicaoKg') * valor('adicaoPreco') +
+        valor('fibra1Kg') * valor('fibra1Preco') +
+        valor('fibra2Kg') * valor('fibra2Preco') +
+        valor('areia1Kg') * valor('areia1Preco') +
+        valor('areia2Kg') * valor('areia2Preco') +
+        valor('areia3Kg') * valor('areia3Preco') +
+        valor('aditivo1Kg') * valor('aditivo1Preco') +
+        valor('aditivo2Kg') * valor('aditivo2Preco') +
+        valor('aditivo3Kg') * valor('aditivo3Preco') +
+        valor('brita1Kg') * valor('brita1Preco') +
+        valor('brita2Kg') * valor('brita2Preco') +
+        valor('brita3Kg') * valor('brita3Preco');
+
+      var volumeCaminhao = valor('volumeCaminhao');
+      var volumeCarga = valor('volumeCarga');
+      var distancia = valor('distancia');
+      var consumo = valor('consumo');
+      var precoCombustivel = valor('precoCombustivel');
+      var pedagio = valor('pedagio');
+      var taxaServico = valor('taxaServico');
+      var depreciacao = valor('depreciacao');
+      var idaVolta = valor('idaVolta');
+
+      if (volumeCarga <= 0) {
+        throw new Error('Informe a quantidade entregue / carga da viagem em m³.');
+      }
+
+      if (volumeCaminhao > 0 && volumeCarga > volumeCaminhao) {
+        throw new Error('A carga não pode ser maior que o volume do caminhão.');
+      }
+
+      var litrosConsumidos = 0;
+      if (consumo > 0) {
+        litrosConsumidos = (distancia * idaVolta) / consumo;
+      }
+
+      var custoCombustivel = litrosConsumidos * precoCombustivel;
+      var custoViagem = custoCombustivel + pedagio + taxaServico + depreciacao;
+      var custoEntrega = custoViagem / volumeCarga;
+      var custoBase = materiais + custoEntrega;
+
+      var impostoPerc = valor('imposto') / 100;
+      var valorImposto = custoBase * impostoPerc;
+
+      var lucroPerc = valor('lucro') / 100;
+      var valorLucro = custoBase * lucroPerc;
+
+      var custoFinal = custoBase + valorImposto + valorLucro;
+      var margem = custoFinal > 0 ? (valorLucro / custoFinal) * 100 : 0;
+
+      return {
+        id: Date.now(),
+        dataHora: new Date().toLocaleString('pt-BR'),
+        nomeObra: texto('nomeObra'),
+        cliente: texto('cliente'),
+        volumeCarga: volumeCarga,
+        materiais: materiais,
+        custoViagem: custoViagem,
+        custoEntrega: custoEntrega,
+        custoBase: custoBase,
+        impostoPerc: impostoPerc * 100,
+        valorImposto: valorImposto,
+        valorLucro: valorLucro,
+        margem: margem,
+        custoFinal: custoFinal
+      };
+    }
+
+    function preencherResultados(dados) {
+      document.getElementById('resultadoMateriais').value = moeda(dados.materiais);
+      document.getElementById('resultadoViagem').value = moeda(dados.custoViagem);
+      document.getElementById('resultadoEntrega').value = moeda(dados.custoEntrega);
+      document.getElementById('resultadoBase').value = moeda(dados.custoBase);
+      document.getElementById('resultadoImposto').value = moeda(dados.valorImposto);
+      document.getElementById('resultadoLucro').value = moeda(dados.valorLucro);
+      document.getElementById('resultadoMargem').value = dados.margem.toFixed(2) + '%';
+      document.getElementById('resultadoFinal').value = moeda(dados.custoFinal);
+    }
+
+    function calcular() {
+      try {
+        limparStatus();
+        var dados = calcularDados();
+        preencherResultados(dados);
+        mostrarStatus('Cálculo realizado com sucesso.', 'ok');
+        return dados;
+      } catch (e) {
+        mostrarStatus(e.message, 'error');
+        return null;
+      }
+    }
+
+    function obterHistorico() {
+      if (storageDisponivel) {
+        try {
+          return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+        } catch (e) {
+          return [];
+        }
+      }
+      return memoriaTemporaria;
+    }
+
+    function salvarHistorico(lista) {
+      if (storageDisponivel) {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(lista));
+        } catch (e) {
+          memoriaTemporaria = lista;
+        }
+      } else {
+        memoriaTemporaria = lista;
+      }
+    }
+
+    function salvarNaTabela() {
+      try {
+        var dados = calcular();
+        if (!dados) return;
+
+        var historico = obterHistorico();
+        historico.push(dados);
+        salvarHistorico(historico);
+        renderizarHistorico();
+
+        if (storageDisponivel) {
+          mostrarStatus('Cálculo salvo localmente e incluído na tabela.', 'ok');
+        } else {
+          mostrarStatus('Cálculo incluído na tabela, mas sem persistência local neste modo de abertura.', 'warn');
+        }
+      } catch (e) {
+        mostrarStatus('Erro ao salvar na tabela: ' + e.message, 'error');
+      }
+    }
+
+    function excluirItem(id) {
+      var historico = obterHistorico().filter(function(item) {
+        return item.id !== id;
+      });
+      salvarHistorico(historico);
+      renderizarHistorico();
+      mostrarStatus('Item excluído com sucesso.', 'ok');
+    }
+
+    function apagarHistorico() {
+      var confirmar = confirm('Deseja apagar todo o histórico?');
+      if (!confirmar) return;
+
+      if (storageDisponivel) {
+        try {
+          localStorage.removeItem(STORAGE_KEY);
+        } catch (e) {}
+      }
+
+      memoriaTemporaria = [];
+      renderizarHistorico();
+      mostrarStatus('Histórico apagado com sucesso.', 'ok');
+    }
+
+    function renderizarHistorico() {
+      var tbody = document.getElementById('tabelaHistorico');
+      var historico = obterHistorico();
+
+      tbody.innerHTML = '';
+
+      for (var i = 0; i < historico.length; i++) {
+        var item = historico[i];
+        var tr = document.createElement('tr');
+
+        tr.innerHTML =
+          '<td>' + (item.dataHora || '') + '</td>' +
+          '<td>' + (item.nomeObra || '') + '</td>' +
+          '<td>' + (item.cliente || '') + '</td>' +
+          '<td>' + Number(item.volumeCarga || 0).toFixed(2) + '</td>' +
+          '<td>' + moeda(item.materiais) + '</td>' +
+          '<td>' + moeda(item.custoViagem) + '</td>' +
+          '<td>' + moeda(item.custoEntrega) + '</td>' +
+          '<td>' + moeda(item.custoBase) + '</td>' +
+          '<td>' + Number(item.impostoPerc || 0).toFixed(2) + '%</td>' +
+          '<td>' + moeda(item.valorLucro) + '</td>' +
+          '<td>' + Number(item.margem || 0).toFixed(2) + '%</td>' +
+          '<td>' + moeda(item.custoFinal) + '</td>' +
+          '<td><button class="danger" type="button" onclick="excluirItem(' + item.id + ')">Excluir</button></td>';
+
+        tbody.appendChild(tr);
+      }
+    }
+
+    function limparCampos() {
+      var inputs = document.querySelectorAll('input');
+
+      for (var i = 0; i < inputs.length; i++) {
+        if (inputs[i].hasAttribute('readonly')) {
+          inputs[i].value = '';
+        } else if (inputs[i].type === 'number') {
+          inputs[i].value = '0';
+        } else {
+          inputs[i].value = '';
+        }
+      }
+
+      document.getElementById('imposto').value = '8';
+      document.getElementById('idaVolta').value = '2';
+      limparStatus();
+    }
+
+    window.onload = function() {
+      storageDisponivel = testarStorage();
+
+      document.getElementById('btnCalcular').onclick = calcular;
+      document.getElementById('btnSalvar').onclick = salvarNaTabela;
+      document.getElementById('btnLimpar').onclick = limparCampos;
+      document.getElementById('btnApagar').onclick = apagarHistorico;
+
+      renderizarHistorico();
+
+      if (storageDisponivel) {
+        mostrarStatus('Aplicação carregada com armazenamento local ativo.', 'ok');
+      } else {
+        mostrarStatus('Aplicação carregada, mas o navegador restringiu o armazenamento local neste modo.', 'warn');
+      }
+    };
+  </script>
+</body>
+</html>
