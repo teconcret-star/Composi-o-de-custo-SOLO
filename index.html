@@ -1043,7 +1043,10 @@
       }
 
       while (true) {
-        var imposto = prompt('Tributação\n\nEscolha o imposto da NF (4 a 10):', document.getElementById('imposto').value || '8');
+        var imposto = prompt(
+          'Tributação\n\nEscolha o imposto da NF (' + IMPOSTO_OPCOES[0] + ' a ' + IMPOSTO_OPCOES[IMPOSTO_OPCOES.length - 1] + '):',
+          document.getElementById('imposto').value || '8'
+        );
         if (imposto === null) {
           mostrarStatus('Preenchimento da composição por perguntas cancelado.', 'warn');
           return;
@@ -1088,7 +1091,8 @@
       }
 
       setTimeout(function() {
-        if (!obterUsinas().length) {
+        var usinas = obterUsinas();
+        if (!usinas.length) {
           if (confirm('Modo mobile: deseja cadastrar a usina agora pelo fluxo de perguntas automáticas?')) {
             iniciarCadastroPorPerguntas();
           }
