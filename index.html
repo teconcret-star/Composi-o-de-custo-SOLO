@@ -1102,7 +1102,7 @@
         if (confirm('Modo mobile: deseja preencher a composição MCC em janelas de perguntas automáticas?')) {
           iniciarComposicaoPorPerguntas();
         }
-      }, MOBILE_WIZARD_DELAY_MS);
+      }, MOBILE_WIZARD_DELAY_MS); // Aguarda o primeiro paint no mobile antes de abrir os diálogos.
     }
 
     function capturarCustosCadastro() {
@@ -1657,9 +1657,7 @@
       document.getElementById('btnSalvarUsina').onclick = salvarCadastroUsina;
       document.getElementById('btnLimparUsina').onclick = limparCadastroUsina;
       document.getElementById('btnAssistenteUsina').onclick = iniciarCadastroPorPerguntas;
-      document.getElementById('btnAssistenteComposicao').onclick = function() {
-        iniciarComposicaoPorPerguntas();
-      };
+      document.getElementById('btnAssistenteComposicao').onclick = iniciarComposicaoPorPerguntas;
       document.getElementById('usinaSelecionada').onchange = function() {
         if (this.value) {
           preencherPrecosDaUsina(this.value);
