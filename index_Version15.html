@@ -1088,7 +1088,7 @@
     function gerarNomeArquivo(item) {
       var nomeBase = String(item.nomeObra || 'extrato-mcc')
         .normalize('NFD')
-        .replace(/[̀-ͯ]/g, '')
+        .replace(/[\u0300-\u036f]/g, '')
         .toLowerCase();
       var base = nomeBase.replace(/[^a-z0-9]+/g, '-');
       base = base.replace(/^-+|-+$/g, '');
