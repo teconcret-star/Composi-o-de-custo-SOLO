@@ -493,13 +493,13 @@
     <div id="status" class="status"></div>
 
     <!-- Modal de cadastro de insumos -->
-    <div id="modalInsumos" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalInsumosTitle">
+    <div id="modalInsumos" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalInsumosTitle" aria-describedby="modalInsumosDesc">
       <div class="modal-box">
         <div class="modal-header">
           <h3 id="modalInsumosTitle">Custos dos insumos da usina</h3>
           <button class="btn-fechar-modal" type="button" id="btnFecharModalInsumos" title="Fechar">✕</button>
         </div>
-        <p class="helper">Informe o fornecedor/procedência e o custo por unidade de cada insumo. Os valores serão usados automaticamente na composição ao selecionar a usina.</p>
+        <p id="modalInsumosDesc" class="helper">Informe o fornecedor/procedência e o custo por unidade de cada insumo. Os valores serão usados automaticamente na composição ao selecionar a usina.</p>
         <div id="cadastroCustos" class="grid"></div>
         <div class="actions" style="margin-top:16px; justify-content: flex-end;">
           <button class="secondary" type="button" id="btnFecharModalInsumos2">Fechar</button>
@@ -1207,6 +1207,7 @@
     }
 
     function abrirModalInsumos() {
+      window._modalInsumosTrigger = document.activeElement;
       document.getElementById('modalInsumos').classList.add('open');
       // Foca o primeiro campo do modal para acessibilidade
       var primeiroCampo = document.querySelector('#cadastroCustos input');
@@ -1216,6 +1217,9 @@
     function fecharModalInsumos() {
       document.getElementById('modalInsumos').classList.remove('open');
       atualizarResumoInsumosCadastro();
+      // Retorna o foco ao elemento que abriu o modal
+      var trigger = window._modalInsumosTrigger || document.getElementById('btnAbrirModalInsumos');
+      if (trigger && trigger.focus) trigger.focus();
     }
 
     function atualizarResumoInsumosCadastro() {
