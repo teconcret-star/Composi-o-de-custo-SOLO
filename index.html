@@ -444,6 +444,7 @@
           <div class="actions">
             <button id="btnSalvarUsina" class="secondary" type="button">Salvar usina</button>
             <button id="btnLimparUsina" class="warning" type="button">Limpar cadastro</button>
+            <button id="btnIrParaComposicao" class="primary" type="button">Ir para composição</button>
           </div>
         </div>
 
@@ -513,6 +514,10 @@
             <p class="muted">Se ainda não houver usina cadastrada, use a aba de cadastros para incluir a usina antes de continuar.</p>
           </div>
         </div>
+        <div class="actions">
+          <button id="btnStep1VoltarCadastros" class="neutral" type="button">Voltar para Cadastros</button>
+          <button id="btnStep1Proxima" class="primary" type="button">Próxima etapa</button>
+        </div>
       </div>
 
       <div id="step2" class="step-panel">
@@ -532,6 +537,10 @@
           </div>
           <p class="helper">As quantidades podem ser informadas manualmente. Os preços são preenchidos pela usina selecionada, mas ainda podem ser ajustados se necessário.</p>
           <div id="materiaisGrid" class="grid"></div>
+        </div>
+        <div class="actions">
+          <button id="btnStep2Anterior" class="neutral" type="button">Etapa anterior</button>
+          <button id="btnStep2Proxima" class="primary" type="button">Próxima etapa</button>
         </div>
       </div>
 
@@ -574,6 +583,10 @@
             </select>
           </div>
         </div>
+        <div class="actions">
+          <button id="btnStep3Anterior" class="neutral" type="button">Etapa anterior</button>
+          <button id="btnStep3Proxima" class="primary" type="button">Próxima etapa</button>
+        </div>
       </div>
 
       <div id="step4" class="step-panel">
@@ -599,6 +612,10 @@
             <input type="number" id="lucro" step="0.01" value="0">
           </div>
         </div>
+        <div class="actions">
+          <button id="btnStep4Anterior" class="neutral" type="button">Etapa anterior</button>
+          <button id="btnStep4Proxima" class="primary" type="button">Próxima etapa</button>
+        </div>
       </div>
 
       <div id="step5" class="step-panel">
@@ -614,6 +631,7 @@
             <h3>Ações finais</h3>
             <p class="helper">Calcule primeiro. Depois, se desejar, salve a composição no histórico.</p>
             <div class="actions">
+              <button id="btnStep5Anterior" class="neutral" type="button">Etapa anterior</button>
               <button id="btnCalcular" class="primary" type="button">Calcular custo</button>
               <button id="btnSalvar" class="secondary" type="button">Salvar composição</button>
               <button id="btnLimpar" class="warning" type="button">Limpar formulário</button>
@@ -719,6 +737,7 @@
     };
     var ultimoCalculo = null;
     var etapaAtual = 0;
+    var MAX_INDICE_ETAPA = 4;
     var IMPOSTO_OPCOES = ['4', '5', '6', '7', '8', '9', '10'];
     var abaPrincipalAtiva = 'cadastros';
     var pdfJsLoadingPromise = null;
@@ -1197,6 +1216,27 @@
         return false;
       }
       return true;
+    }
+
+    function avancarEtapaManual() {
+      var proximaEtapa = etapaAtual + 1;
+      if (proximaEtapa > MAX_INDICE_ETAPA) return;
+      if (!validarEtapa(etapaAtual)) return;
+      limparStatus();
+      irParaEtapa(proximaEtapa);
+    }
+
+    function voltarEtapaManual() {
+      var etapaAnterior = etapaAtual - 1;
+      if (etapaAnterior < 0) return;
+      limparStatus();
+      irParaEtapa(etapaAnterior);
+    }
+
+    function irParaComposicaoPeloCadastro() {
+      mudarAbaPrincipal('composicao');
+      irParaEtapa(0);
+      mostrarStatus('Você está na composição. Use os botões para avançar entre as etapas.', 'ok');
     }
 
     function focarCampo(id) {
@@ -1981,7 +2021,7 @@
           ultimoCalculo = historico[i];
           preencherResultados(historico[i]);
           renderizarExtrato(historico[i]);
-          irParaEtapa(4);
+          irParaEtapa(MAX_INDICE_ETAPA);
           mostrarStatus('Composição carregada para edição a partir do histórico.', 'ok');
           return;
         }
@@ -2169,11 +2209,25 @@
         ['imposto', 'lucro'],
         {
           etapaAtual: 3,
-          proximaEtapa: 4,
+          proximaEtapa: MAX_INDICE_ETAPA,
           foco: 'btnCalcular',
           mensagem: 'Etapas concluídas. Clique em "Calcular custo" para gerar o resultado.'
         }
       );
+    }
+
+    function configurarBotoesEtapas() {
+      document.getElementById('btnStep1VoltarCadastros').onclick = function() {
+        mudarAbaPrincipal('cadastros');
+      };
+      document.getElementById('btnStep1Proxima').onclick = avancarEtapaManual;
+      document.getElementById('btnStep2Anterior').onclick = voltarEtapaManual;
+      document.getElementById('btnStep2Proxima').onclick = avancarEtapaManual;
+      document.getElementById('btnStep3Anterior').onclick = voltarEtapaManual;
+      document.getElementById('btnStep3Proxima').onclick = avancarEtapaManual;
+      document.getElementById('btnStep4Anterior').onclick = voltarEtapaManual;
+      document.getElementById('btnStep4Proxima').onclick = avancarEtapaManual;
+      document.getElementById('btnStep5Anterior').onclick = voltarEtapaManual;
     }
 
     window.onload = function() {
@@ -2183,6 +2237,7 @@
       renderizarCamposMateriais();
       renderizarEtapas();
       configurarFluxoGuiado();
+      configurarBotoesEtapas();
       configurarAbasPrincipais();
       renderizarUsinas();
       atualizarSelectUsinas();
@@ -2191,6 +2246,7 @@
 
       document.getElementById('btnSalvarUsina').onclick = salvarCadastroUsina;
       document.getElementById('btnLimparUsina').onclick = limparCadastroUsina;
+      document.getElementById('btnIrParaComposicao').onclick = irParaComposicaoPeloCadastro;
       document.getElementById('btnImportarTracoPdf').onclick = function() {
         mudarAbaPrincipal('composicao');
         importarTracoPdf();
