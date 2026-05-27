@@ -726,6 +726,7 @@
     var MATERIALS = [
       { key: 'cimento', label: 'Cimento', unidade: 'kg/m³' },
       { key: 'adicao', label: 'Adição', unidade: 'kg/m³' },
+      { key: 'agua', label: 'Água', unidade: 'kg/m³' },
       { key: 'fibra1', label: 'Fibra 1', unidade: 'kg/m³' },
       { key: 'fibra2', label: 'Fibra 2', unidade: 'kg/m³' },
       { key: 'areia1', label: 'Areia 1', unidade: 'kg/m³' },
@@ -755,6 +756,7 @@
     var MATERIAL_ALIASES = {
       cimento: ['cimento'],
       adicao: ['adição', 'adicao'],
+      agua: ['água', 'agua'],
       fibra1: ['fibra 1', 'fibra1'],
       fibra2: ['fibra 2', 'fibra2'],
       areia1: ['areia 1', 'areia1'],
@@ -815,6 +817,93 @@
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
       });
+    }
+
+    function obterMaterialPorChave(chave) {
+      for (var i = 0; i < MATERIALS.length; i++) {
+        if (MATERIALS[i].key === chave) return MATERIALS[i];
+      }
+      return null;
+    }
+
+    function nomePadraoInsumo(chave) {
+      var material = obterMaterialPorChave(chave);
+      return material ? material.label : '';
+    }
+
+    function obterNomeCadastroInsumo(chave, fallback) {
+      var campo = document.getElementById('cadastro-' + chave + '-nome');
+      return campo ? (campo.value.trim() || fallback || nomePadraoInsumo(chave)) : (fallback || nomePadraoInsumo(chave));
+    }
+
+    function obterNomeComposicaoInsumo(chave, fallback) {
+      var campo = document.getElementById(chave + 'Nome');
+      return campo ? (campo.value.trim() || fallback || nomePadraoInsumo(chave)) : (fallback || nomePadraoInsumo(chave));
+    }
+
+    function definirNomeComposicaoInsumo(chave, nome) {
+      var campo = document.getElementById(chave + 'Nome');
+      if (campo) {
+        campo.value = nome || nomePadraoInsumo(chave);
+      }
+    }
+
+    function obterNomesUsina(usina) {
+      var nomes = {};
+      for (var i = 0; i < MATERIALS.length; i++) {
+        var item = MATERIALS[i];
+        nomes[item.key] = usina && usina.nomes && usina.nomes[item.key]
+          ? String(usina.nomes[item.key]).trim()
+          : item.label;
+      }
+      return nomes;
+    }
+
+    function normalizarUsina(usina) {
+      var registro = usina || {};
+      if (!registro.custos) registro.custos = {};
+      registro.nomes = obterNomesUsina(registro);
+      return registro;
+    }
+
+    function localizarUsinaPorId(usinaId) {
+      var usinas = obterUsinas();
+      for (var i = 0; i < usinas.length; i++) {
+        if (String(usinas[i].id) === String(usinaId)) {
+          return usinas[i];
+        }
+      }
+      return null;
+    }
+
+    function mapearCustosPorNome(usina) {
+      var mapa = {};
+      if (!usina) return mapa;
+      var nomes = obterNomesUsina(usina);
+      for (var i = 0; i < MATERIALS.length; i++) {
+        var item = MATERIALS[i];
+        var nomeNormalizado = normalizarTextoBusca(nomes[item.key]);
+        if (nomeNormalizado) {
+          mapa[nomeNormalizado] = Number(usina.custos[item.key] || 0);
+        }
+      }
+      return mapa;
+    }
+
+    function resolverCustoInsumo(usina, chave, nomeInsumo) {
+      if (!usina) return 0;
+      var nomeInformado = normalizarTextoBusca(nomeInsumo);
+      var nomesUsina = obterNomesUsina(usina);
+      var nomeDaChave = normalizarTextoBusca(nomesUsina[chave]);
+      var custoPorChave = Number(usina.custos[chave] || 0);
+      if (nomeInformado && nomeDaChave && nomeInformado === nomeDaChave) {
+        return custoPorChave;
+      }
+      var mapaPorNome = mapearCustosPorNome(usina);
+      if (nomeInformado && Object.prototype.hasOwnProperty.call(mapaPorNome, nomeInformado)) {
+        return Number(mapaPorNome[nomeInformado] || 0);
+      }
+      return custoPorChave;
     }
 
     function escapeHtml(valorTexto) {
@@ -947,7 +1036,7 @@
     }
 
     function obterUsinas() {
-      return obterLista(USINAS_STORAGE_KEY);
+      return obterLista(USINAS_STORAGE_KEY).map(normalizarUsina);
     }
 
     function salvarHistorico(lista) {
@@ -966,6 +1055,8 @@
         html +=
           '<div class="card">' +
             '<h4>' + escapeHtml(item.label) + '</h4>' +
+            '<label for="cadastro-' + item.key + '-nome">Nome do insumo</label>' +
+            '<input type="text" id="cadastro-' + item.key + '-nome" value="' + escapeHtml(item.label) + '" placeholder="Ex.: ' + escapeHtml(item.label) + '">' +
             '<label for="cadastro-' + item.key + '-preco">Custo por unidade (R$/kg)</label>' +
             '<input type="number" id="cadastro-' + item.key + '-preco" step="0.01" value="0">' +
           '</div>';
@@ -981,6 +1072,8 @@
         html +=
           '<div class="card">' +
             '<h3>' + escapeHtml(item.label) + '</h3>' +
+            '<label for="' + item.key + 'Nome">Nome do insumo</label>' +
+            '<input type="text" id="' + item.key + 'Nome" value="' + escapeHtml(item.label) + '" placeholder="Ex.: ' + escapeHtml(item.label) + '">' +
             '<label for="' + item.key + 'Kg">Quantidade (' + escapeHtml(item.unidade) + ')</label>' +
             '<input type="number" id="' + item.key + 'Kg" step="0.01" value="0">' +
             '<label for="' + item.key + 'Preco">Preço (R$/kg)</label>' +
@@ -1123,10 +1216,21 @@
 
       for (var i = 0; i < MATERIALS.length; i++) {
         var item = MATERIALS[i];
+        var campoNomeId = 'cadastro-' + item.key + '-nome';
         var campoId = 'cadastro-' + item.key + '-preco';
+        var nomeInsumo = perguntarTexto(
+          'Cadastro da usina - ' + item.label + '\n\nInforme o nome do insumo:',
+          document.getElementById(campoNomeId).value || item.label,
+          false
+        );
+        if (nomeInsumo === null) {
+          mostrarStatus('Cadastro por perguntas cancelado.', 'warn');
+          return;
+        }
+        document.getElementById(campoNomeId).value = nomeInsumo;
         var valorAtual = document.getElementById(campoId).value || '0';
         var custo = perguntarNumero(
-          'Cadastro da usina - ' + item.label + '\n\nInforme o custo por unidade (R$/kg):',
+          'Cadastro da usina - ' + nomeInsumo + '\n\nInforme o custo por unidade (R$/kg):',
           valorAtual,
           true
         );
@@ -1176,8 +1280,9 @@
 
       for (var i = 0; i < MATERIALS.length; i++) {
         var item = MATERIALS[i];
+        var nomeAtual = obterNomeComposicaoInsumo(item.key, item.label);
         var quantidade = perguntarNumero(
-          'Materiais por m³ - ' + item.label + '\n\nInforme a quantidade (' + item.unidade + '):',
+          'Materiais por m³ - ' + nomeAtual + '\n\nInforme a quantidade (' + item.unidade + '):',
           document.getElementById(item.key + 'Kg').value || '0',
           true
         );
@@ -1293,6 +1398,7 @@
     function interpretarTracoTexto(textoBruto) {
       var textoBase = normalizarTextoBusca(textoBruto).replace(/\s+/g, ' ');
       var quantidades = {};
+      var nomes = {};
       var totalEncontrado = 0;
       var chavesEncontradas = {};
       var linhas = String(textoBruto || '')
@@ -1315,60 +1421,74 @@
         brita: 0
       };
 
-      function registrarQuantidade(chave, valorEncontrado) {
+      function registrarQuantidade(chave, valorEncontrado, nomeEncontrado) {
         if (!chave || isNaN(valorEncontrado) || valorEncontrado == null || chavesEncontradas[chave]) return;
         quantidades[chave] = valorEncontrado;
+        nomes[chave] = nomeEncontrado || nomePadraoInsumo(chave);
         chavesEncontradas[chave] = true;
         if (valorEncontrado > 0) totalEncontrado++;
+      }
+
+      function extrairCampoCabecalho(prefixo) {
+        for (var indice = 0; indice < linhas.length; indice++) {
+          var linhaOriginal = linhas[indice];
+          var linhaNormalizada = normalizarTextoBusca(linhaOriginal);
+          var prefixoNormalizado = normalizarTextoBusca(prefixo);
+          if (linhaNormalizada.indexOf(prefixoNormalizado + ' ') === 0) {
+            return linhaOriginal.substring(prefixo.length).trim();
+          }
+        }
+        return '';
       }
 
       function interpretarLinhaComposicao(linhaBruta) {
         var linha = normalizarTextoBusca(linhaBruta).replace(/\s+/g, ' ').trim();
         if (!linha || /^material\b/.test(linha) || /^procedencia\b/.test(linha)) return null;
 
-        var tokens = linha.split(' ');
-        var familia = tokens[0];
-        if (!familia) return null;
-
-        if (familia === 'cimento' || familia === 'adicao') {
-          for (var indice = 1; indice < tokens.length; indice++) {
-            if (/^-?\d+(?:[\.,]\d+)?$/.test(tokens[indice])) {
-              return {
-                chave: familia === 'cimento' ? 'cimento' : 'adicao',
-                valor: parseFloat(tokens[indice].replace(',', '.'))
-              };
-            }
+        var linhaOriginal = String(linhaBruta || '').replace(/\s+/g, ' ').trim();
+        var tokensOriginais = linhaOriginal.split(' ');
+        var indicesNumericos = [];
+        for (var indice = 0; indice < tokensOriginais.length; indice++) {
+          if (/^-?\d+(?:\/\d+)?(?:[\.,]\d+)?$/.test(tokensOriginais[indice])) {
+            indicesNumericos.push(indice);
           }
-          return null;
+        }
+        if (indicesNumericos.length < 2) return null;
+
+        var indiceQuantidade = indicesNumericos[indicesNumericos.length - 2];
+        var nomeMaterial = tokensOriginais.slice(0, indiceQuantidade).join(' ').trim();
+        var valorQuantidade = parseFloat(String(tokensOriginais[indiceQuantidade]).replace(',', '.'));
+        var nomeNormalizado = normalizarTextoBusca(nomeMaterial);
+        if (!nomeMaterial || isNaN(valorQuantidade)) return null;
+
+        if (nomeNormalizado.indexOf('cimento') === 0) {
+          return { chave: 'cimento', valor: valorQuantidade, nome: nomeMaterial };
+        }
+        if (nomeNormalizado.indexOf('adicao') === 0) {
+          return { chave: 'adicao', valor: valorQuantidade, nome: nomeMaterial };
+        }
+        if (nomeNormalizado.indexOf('agua') === 0) {
+          return { chave: 'agua', valor: valorQuantidade, nome: nomeMaterial };
         }
 
+        var familia = nomeNormalizado.split(' ')[0];
         var slots = familiasSequenciais[familia];
         if (!slots) return null;
 
         var indiceFamilia = indicesFamilia[familia];
         if (indiceFamilia >= slots.length) return null;
 
-        var pulouIdentificador = false;
-        for (var j = 1; j < tokens.length; j++) {
-          var token = tokens[j];
-          if (!pulouIdentificador && /^-?\d+(?:\/\d+)?$/.test(token)) {
-            pulouIdentificador = true;
-            continue;
-          }
-          if (/^-?\d+(?:[\.,]\d+)?$/.test(token)) {
-            indicesFamilia[familia]++;
-            return {
-              chave: slots[indiceFamilia],
-              valor: parseFloat(token.replace(',', '.'))
-            };
-          }
-        }
-
-        return null;
+        indicesFamilia[familia]++;
+        return {
+          chave: slots[indiceFamilia],
+          valor: valorQuantidade,
+          nome: nomeMaterial
+        };
       }
 
       for (var indiceMaterial = 0; indiceMaterial < MATERIALS.length; indiceMaterial++) {
         quantidades[MATERIALS[indiceMaterial].key] = 0;
+        nomes[MATERIALS[indiceMaterial].key] = MATERIALS[indiceMaterial].label;
       }
 
       var emSecaoComposicao = false;
@@ -1387,7 +1507,7 @@
 
         var leituraLinha = interpretarLinhaComposicao(linhas[indiceLinha]);
         if (leituraLinha) {
-          registrarQuantidade(leituraLinha.chave, leituraLinha.valor);
+          registrarQuantidade(leituraLinha.chave, leituraLinha.valor, leituraLinha.nome);
         }
       }
 
@@ -1408,13 +1528,74 @@
           }
         }
 
-        registrarQuantidade(item.key, isNaN(valorEncontrado) || valorEncontrado == null ? 0 : valorEncontrado);
+        registrarQuantidade(
+          item.key,
+          isNaN(valorEncontrado) || valorEncontrado == null ? 0 : valorEncontrado,
+          nomes[item.key] || item.label
+        );
       }
 
       return {
+        meta: {
+          cliente: extrairCampoCabecalho('CLIENTE'),
+          nomeObra: extrairCampoCabecalho('OBRA'),
+          familiaConcreto: extrairCampoCabecalho('FAMÍLIA/TRAÇO') || extrairCampoCabecalho('FAMILIA/TRAÇO')
+        },
         quantidades: quantidades,
+        nomes: nomes,
         totalEncontrado: totalEncontrado
       };
+    }
+
+    function atualizarUsinaComDadosDaComposicao(usinaId) {
+      var usinas = obterUsinas();
+      var atualizado = false;
+      for (var i = 0; i < usinas.length; i++) {
+        if (String(usinas[i].id) !== String(usinaId)) continue;
+        var usina = normalizarUsina(usinas[i]);
+        for (var j = 0; j < MATERIALS.length; j++) {
+          var item = MATERIALS[j];
+          usina.nomes[item.key] = obterNomeComposicaoInsumo(item.key, item.label);
+          var precoAtual = valor(item.key + 'Preco');
+          if (precoAtual > 0) {
+            usina.custos[item.key] = precoAtual;
+          }
+        }
+        usinas[i] = usina;
+        atualizado = true;
+        break;
+      }
+      if (atualizado) {
+        salvarUsinas(usinas);
+        renderizarUsinas();
+        atualizarSelectUsinas();
+      }
+      return atualizado;
+    }
+
+    function solicitarCustosFaltantes(usinaId) {
+      var atualizouCustos = false;
+      for (var i = 0; i < MATERIALS.length; i++) {
+        var item = MATERIALS[i];
+        var quantidade = valor(item.key + 'Kg');
+        var precoAtual = valor(item.key + 'Preco');
+        if (quantidade <= 0 || precoAtual > 0) continue;
+        var nomeInsumo = obterNomeComposicaoInsumo(item.key, item.label);
+        var custoInformado = perguntarNumero(
+          'Importação da carta traço - ' + nomeInsumo + '\n\nInforme o custo por unidade (R$/kg):',
+          '0',
+          true
+        );
+        if (custoInformado === null) {
+          continue;
+        }
+        document.getElementById(item.key + 'Preco').value = String(custoInformado);
+        atualizouCustos = true;
+      }
+      if (atualizouCustos && usinaId) {
+        atualizarUsinaComDadosDaComposicao(usinaId);
+      }
+      return atualizouCustos;
     }
 
     async function importarTracoPdf() {
@@ -1422,9 +1603,15 @@
       var campoArquivo = document.getElementById('arquivoTracoPdf');
       var botao = document.getElementById('btnImportarTracoPdf');
       var arquivo = campoArquivo.files && campoArquivo.files[0];
+      var usinaId = texto('usinaSelecionada');
 
       if (!arquivo) {
         mostrarStatus('Selecione o arquivo PDF do traço para importar.', 'warn');
+        return;
+      }
+
+      if (!usinaId) {
+        mostrarStatus('Selecione uma usina cadastrada antes de importar a carta traço.', 'warn');
         return;
       }
 
@@ -1457,13 +1644,33 @@
 
         for (var j = 0; j < MATERIALS.length; j++) {
           var material = MATERIALS[j];
+          definirNomeComposicaoInsumo(material.key, leitura.nomes[material.key] || material.label);
           document.getElementById(material.key + 'Kg').value = Number(leitura.quantidades[material.key] || 0);
         }
+
+        if (leitura.meta.familiaConcreto) {
+          document.getElementById('familiaConcreto').value = leitura.meta.familiaConcreto;
+        }
+        if (leitura.meta.nomeObra) {
+          document.getElementById('nomeObra').value = leitura.meta.nomeObra;
+        }
+        if (leitura.meta.cliente) {
+          document.getElementById('cliente').value = leitura.meta.cliente;
+        }
+
+        preencherPrecosDaUsina(usinaId, { manterNomes: true });
+        var custosAtualizados = solicitarCustosFaltantes(usinaId);
+        atualizarUsinaComDadosDaComposicao(usinaId);
 
         irParaEtapa(4);
         var dadosCalculados = calcular();
         if (dadosCalculados) {
-          mostrarStatus('Traço importado do PDF, composição preenchida e custo MCC calculado.', 'ok');
+          mostrarStatus(
+            custosAtualizados
+              ? 'Carta traço importada, nomes/custos atualizados na usina e MCC calculado.'
+              : 'Carta traço importada, composição preenchida e custo MCC calculado.',
+            'ok'
+          );
         }
       } catch (e) {
         mostrarStatus('Falha ao importar o PDF do traço: ' + e.message, 'error');
@@ -1482,15 +1689,26 @@
       return custos;
     }
 
+    function capturarNomesCadastro() {
+      var nomes = {};
+      for (var i = 0; i < MATERIALS.length; i++) {
+        var item = MATERIALS[i];
+        nomes[item.key] = obterNomeCadastroInsumo(item.key, item.label);
+      }
+      return nomes;
+    }
+
     function capturarMateriaisComposicao() {
       var materiais = [];
       for (var i = 0; i < MATERIALS.length; i++) {
         var item = MATERIALS[i];
         var quantidade = valor(item.key + 'Kg');
         var preco = valor(item.key + 'Preco');
+        var nome = obterNomeComposicaoInsumo(item.key, item.label);
         materiais.push({
           key: item.key,
-          label: item.label,
+          nome: nome,
+          label: nome,
           quantidade: quantidade,
           preco: preco,
           subtotal: quantidade * preco
@@ -1499,26 +1717,27 @@
       return materiais;
     }
 
-    function preencherPrecosDaUsina(usinaId) {
-      var usinas = obterUsinas();
-      var usina = null;
-      for (var i = 0; i < usinas.length; i++) {
-        if (String(usinas[i].id) === String(usinaId)) {
-          usina = usinas[i];
-          break;
-        }
-      }
-
+    function preencherPrecosDaUsina(usinaId, opcoes) {
+      var usina = localizarUsinaPorId(usinaId);
+      var manterNomes = opcoes && opcoes.manterNomes;
       if (!usina) {
         atualizarPainelResumo();
         return;
       }
 
+      var nomesUsina = obterNomesUsina(usina);
       for (var j = 0; j < MATERIALS.length; j++) {
         var item = MATERIALS[j];
+        if (!manterNomes) {
+          definirNomeComposicaoInsumo(item.key, nomesUsina[item.key] || item.label);
+        }
         var campo = document.getElementById(item.key + 'Preco');
         if (campo) {
-          campo.value = Number(usina.custos[item.key] || 0);
+          campo.value = resolverCustoInsumo(
+            usina,
+            item.key,
+            obterNomeComposicaoInsumo(item.key, nomesUsina[item.key] || item.label)
+          );
         }
       }
 
@@ -1556,6 +1775,7 @@
         id: idAtual || Date.now(),
         nome: nome,
         dataHora: new Date().toLocaleString('pt-BR'),
+        nomes: capturarNomesCadastro(),
         custos: capturarCustosCadastro()
       };
 
@@ -1588,11 +1808,12 @@
       var usinas = obterUsinas();
       for (var i = 0; i < usinas.length; i++) {
         if (String(usinas[i].id) === String(id)) {
-          var usina = usinas[i];
+          var usina = normalizarUsina(usinas[i]);
           document.getElementById('cadastroUsinaId').value = usina.id;
           document.getElementById('cadastroUsinaNome').value = usina.nome;
           for (var j = 0; j < MATERIALS.length; j++) {
             var item = MATERIALS[j];
+            document.getElementById('cadastro-' + item.key + '-nome').value = obterNomesUsina(usina)[item.key] || item.label;
             document.getElementById('cadastro-' + item.key + '-preco').value = Number(usina.custos[item.key] || 0);
           }
           mostrarStatus('Usina carregada para edição.', 'ok');
@@ -1660,6 +1881,7 @@
       document.getElementById('cadastroUsinaId').value = '';
       document.getElementById('cadastroUsinaNome').value = '';
       for (var i = 0; i < MATERIALS.length; i++) {
+        document.getElementById('cadastro-' + MATERIALS[i].key + '-nome').value = MATERIALS[i].label;
         document.getElementById('cadastro-' + MATERIALS[i].key + '-preco').value = '0';
       }
     }
@@ -1885,7 +2107,8 @@
         var item = MATERIALS[i];
         var detalhado = dados.materiaisDetalhados.find(function(material) {
           return material.key === item.key;
-        }) || { quantidade: 0, preco: 0 };
+        }) || { quantidade: 0, preco: 0, nome: item.label, label: item.label };
+        definirNomeComposicaoInsumo(item.key, detalhado.nome || detalhado.label || item.label);
         document.getElementById(item.key + 'Kg').value = Number(detalhado.quantidade || 0);
         document.getElementById(item.key + 'Preco').value = Number(detalhado.preco || 0);
       }
@@ -1970,6 +2193,7 @@
       document.getElementById('cliente').value = '';
 
       for (var i = 0; i < MATERIALS.length; i++) {
+        definirNomeComposicaoInsumo(MATERIALS[i].key, MATERIALS[i].label);
         document.getElementById(MATERIALS[i].key + 'Kg').value = '0';
         document.getElementById(MATERIALS[i].key + 'Preco').value = '0';
       }
@@ -2047,6 +2271,18 @@
         mudarAbaPrincipal('composicao');
         importarTracoPdf();
       };
+      for (var i = 0; i < MATERIALS.length; i++) {
+        (function(item) {
+          var campoNome = document.getElementById(item.key + 'Nome');
+          if (!campoNome) return;
+          campoNome.onchange = function() {
+            var usinaId = texto('usinaSelecionada');
+            if (usinaId) {
+              preencherPrecosDaUsina(usinaId, { manterNomes: true });
+            }
+          };
+        })(MATERIALS[i]);
+      }
       document.getElementById('usinaSelecionada').onchange = function() {
         if (this.value) {
           preencherPrecosDaUsina(this.value);
