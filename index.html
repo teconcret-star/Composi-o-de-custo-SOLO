@@ -833,6 +833,52 @@
         .toLowerCase();
     }
 
+    function extrairLinhasTextoPdf(items) {
+      var grupos = [];
+      var toleranciaY = 2;
+
+      for (var i = 0; i < items.length; i++) {
+        var item = items[i];
+        var textoItem = String(item && item.str || '').trim();
+        if (!textoItem) continue;
+
+        var transform = item.transform || [];
+        var x = Number(transform[4] || 0);
+        var y = Number(transform[5] || 0);
+        var grupo = null;
+
+        for (var j = 0; j < grupos.length; j++) {
+          if (Math.abs(grupos[j].y - y) <= toleranciaY) {
+            grupo = grupos[j];
+            break;
+          }
+        }
+
+        if (!grupo) {
+          grupo = { y: y, itens: [] };
+          grupos.push(grupo);
+        }
+
+        grupo.itens.push({ x: x, texto: textoItem });
+      }
+
+      grupos.sort(function(a, b) {
+        return b.y - a.y;
+      });
+
+      var linhas = [];
+      for (var k = 0; k < grupos.length; k++) {
+        grupos[k].itens.sort(function(a, b) {
+          return a.x - b.x;
+        });
+        linhas.push(grupos[k].itens.map(function(item) {
+          return item.texto;
+        }).join(' ').replace(/\s+/g, ' ').trim());
+      }
+
+      return linhas.join('\n');
+    }
+
     function mudarAbaPrincipal(aba) {
       abaPrincipalAtiva = aba;
       var botoes = document.querySelectorAll('[data-tab-target]');
@@ -1248,9 +1294,106 @@
       var textoBase = normalizarTextoBusca(textoBruto).replace(/\s+/g, ' ');
       var quantidades = {};
       var totalEncontrado = 0;
+      var chavesEncontradas = {};
+      var linhas = String(textoBruto || '')
+        .replace(/\r/g, '\n')
+        .split(/\n+/)
+        .map(function(linha) {
+          return linha.replace(/\s+/g, ' ').trim();
+        })
+        .filter(Boolean);
+      var familiasSequenciais = {
+        fibra: ['fibra1', 'fibra2'],
+        areia: ['areia1', 'areia2', 'areia3'],
+        aditivo: ['aditivo1', 'aditivo2', 'aditivo3'],
+        brita: ['brita1', 'brita2', 'brita3']
+      };
+      var indicesFamilia = {
+        fibra: 0,
+        areia: 0,
+        aditivo: 0,
+        brita: 0
+      };
+
+      function registrarQuantidade(chave, valorEncontrado) {
+        if (!chave || isNaN(valorEncontrado) || valorEncontrado == null || chavesEncontradas[chave]) return;
+        quantidades[chave] = valorEncontrado;
+        chavesEncontradas[chave] = true;
+        if (valorEncontrado > 0) totalEncontrado++;
+      }
+
+      function interpretarLinhaComposicao(linhaBruta) {
+        var linha = normalizarTextoBusca(linhaBruta).replace(/\s+/g, ' ').trim();
+        if (!linha || /^material\b/.test(linha) || /^procedencia\b/.test(linha)) return null;
+
+        var tokens = linha.split(' ');
+        var familia = tokens[0];
+        if (!familia) return null;
+
+        if (familia === 'cimento' || familia === 'adicao') {
+          for (var indice = 1; indice < tokens.length; indice++) {
+            if (/^-?\d+(?:[\.,]\d+)?$/.test(tokens[indice])) {
+              return {
+                chave: familia === 'cimento' ? 'cimento' : 'adicao',
+                valor: parseFloat(tokens[indice].replace(',', '.'))
+              };
+            }
+          }
+          return null;
+        }
+
+        var slots = familiasSequenciais[familia];
+        if (!slots) return null;
+
+        var indiceFamilia = indicesFamilia[familia];
+        if (indiceFamilia >= slots.length) return null;
+
+        var pulouIdentificador = false;
+        for (var j = 1; j < tokens.length; j++) {
+          var token = tokens[j];
+          if (!pulouIdentificador && /^-?\d+(?:\/\d+)?$/.test(token)) {
+            pulouIdentificador = true;
+            continue;
+          }
+          if (/^-?\d+(?:[\.,]\d+)?$/.test(token)) {
+            indicesFamilia[familia]++;
+            return {
+              chave: slots[indiceFamilia],
+              valor: parseFloat(token.replace(',', '.'))
+            };
+          }
+        }
+
+        return null;
+      }
+
+      for (var indiceMaterial = 0; indiceMaterial < MATERIALS.length; indiceMaterial++) {
+        quantidades[MATERIALS[indiceMaterial].key] = 0;
+      }
+
+      var emSecaoComposicao = false;
+      for (var indiceLinha = 0; indiceLinha < linhas.length; indiceLinha++) {
+        var linhaNormalizada = normalizarTextoBusca(linhas[indiceLinha]).replace(/\s+/g, ' ').trim();
+        if (!emSecaoComposicao) {
+          if (/^3[\.\)]?\s*composicao do traco\b/.test(linhaNormalizada)) {
+            emSecaoComposicao = true;
+          }
+          continue;
+        }
+
+        if (/^4[\.\)]?\s*/.test(linhaNormalizada) || /^observacoes tecnicas\b/.test(linhaNormalizada)) {
+          break;
+        }
+
+        var leituraLinha = interpretarLinhaComposicao(linhas[indiceLinha]);
+        if (leituraLinha) {
+          registrarQuantidade(leituraLinha.chave, leituraLinha.valor);
+        }
+      }
 
       for (var i = 0; i < MATERIALS.length; i++) {
         var item = MATERIALS[i];
+        if (chavesEncontradas[item.key]) continue;
         var aliases = MATERIAL_ALIASES[item.key] || [item.label, item.key];
         var valorEncontrado = null;
 
@@ -1265,8 +1408,7 @@
           }
         }
 
-        quantidades[item.key] = isNaN(valorEncontrado) || valorEncontrado == null ? 0 : valorEncontrado;
-        if (quantidades[item.key] > 0) totalEncontrado++;
+        registrarQuantidade(item.key, isNaN(valorEncontrado) || valorEncontrado == null ? 0 : valorEncontrado);
       }
 
       return {
@@ -1303,7 +1445,7 @@
         for (var i = 1; i <= pdf.numPages; i++) {
           var page = await pdf.getPage(i);
           var conteudo = await page.getTextContent();
-          var linhasPagina = conteudo.items.map(function(item) { return item.str; }).join('\n');
+          var linhasPagina = extrairLinhasTextoPdf(conteudo.items || []);
           textoCompleto += '\n' + linhasPagina;
         }
 
