@@ -818,19 +818,9 @@
       return material ? material.label : '';
     }
 
-    function obterNomeCadastroInsumo(chave, fallback) {
-      var campo = document.getElementById('cadastro-' + chave + '-nome');
-      return campo ? (campo.value.trim() || fallback || nomePadraoInsumo(chave)) : (fallback || nomePadraoInsumo(chave));
-    }
-
     function unidadePadraoInsumo(chave) {
       var material = obterMaterialPorChave(chave);
       return material ? material.unidade : 'unidade';
-    }
-
-    function obterUnidadeCadastroInsumo(chave, fallback) {
-      var campo = document.getElementById('cadastro-' + chave + '-unidade');
-      return campo ? (campo.value.trim() || fallback || unidadePadraoInsumo(chave)) : (fallback || unidadePadraoInsumo(chave));
     }
 
     function obterFornecedorCadastroInsumo(chave, fallback) {
@@ -1629,7 +1619,7 @@
       var nomes = {};
       for (var i = 0; i < MATERIALS.length; i++) {
         var item = MATERIALS[i];
-        nomes[item.key] = obterNomeCadastroInsumo(item.key, item.label);
+        nomes[item.key] = item.label;
       }
       return nomes;
     }
@@ -1638,7 +1628,7 @@
       var unidades = {};
       for (var i = 0; i < MATERIALS.length; i++) {
         var item = MATERIALS[i];
-        unidades[item.key] = obterUnidadeCadastroInsumo(item.key, item.unidade);
+        unidades[item.key] = item.unidade;
       }
       return unidades;
     }
