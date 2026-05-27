@@ -725,18 +725,17 @@
     var MATERIALS = [
       { key: 'cimento', label: 'Cimento', unidade: 'kg/m³' },
       { key: 'adicao', label: 'Adição', unidade: 'kg/m³' },
-      { key: 'agua', label: 'Água', unidade: 'kg/m³' },
-      { key: 'fibra1', label: 'Fibra 1', unidade: 'kg/m³' },
-      { key: 'fibra2', label: 'Fibra 2', unidade: 'kg/m³' },
       { key: 'areia1', label: 'Areia 1', unidade: 'kg/m³' },
       { key: 'areia2', label: 'Areia 2', unidade: 'kg/m³' },
       { key: 'areia3', label: 'Areia 3', unidade: 'kg/m³' },
+      { key: 'brita0', label: 'Brita 0', unidade: 'kg/m³' },
+      { key: 'brita12', label: 'Brita 1/2', unidade: 'kg/m³' },
+      { key: 'brita1', label: 'Brita 1', unidade: 'kg/m³' },
       { key: 'aditivo1', label: 'Aditivo 1', unidade: 'kg/m³' },
       { key: 'aditivo2', label: 'Aditivo 2', unidade: 'kg/m³' },
-      { key: 'aditivo3', label: 'Aditivo 3', unidade: 'kg/m³' },
-      { key: 'brita1', label: 'Brita 1', unidade: 'kg/m³' },
-      { key: 'brita2', label: 'Brita 2', unidade: 'kg/m³' },
-      { key: 'brita3', label: 'Brita 3', unidade: 'kg/m³' }
+      { key: 'agua', label: 'Água', unidade: 'kg/m³' },
+      { key: 'fibra1', label: 'Fibra 1', unidade: 'kg/m³' },
+      { key: 'fibra2', label: 'Fibra 2', unidade: 'kg/m³' }
     ];
 
     var COMPOSICAO_STORAGE_KEY = 'mcc_concreto_historico';
@@ -756,18 +755,17 @@
     var MATERIAL_ALIASES = {
       cimento: ['cimento'],
       adicao: ['adição', 'adicao'],
-      agua: ['água', 'agua'],
-      fibra1: ['fibra 1', 'fibra1'],
-      fibra2: ['fibra 2', 'fibra2'],
       areia1: ['areia 1', 'areia1'],
       areia2: ['areia 2', 'areia2'],
       areia3: ['areia 3', 'areia3'],
+      brita0: ['brita 0', 'brita0'],
+      brita12: ['brita 1/2', 'brita 1 2', 'brita1/2', 'brita12'],
+      brita1: ['brita 1', 'brita1'],
       aditivo1: ['aditivo 1', 'aditivo1'],
       aditivo2: ['aditivo 2', 'aditivo2'],
-      aditivo3: ['aditivo 3', 'aditivo3'],
-      brita1: ['brita 1', 'brita1'],
-      brita2: ['brita 2', 'brita2'],
-      brita3: ['brita 3', 'brita3']
+      agua: ['água', 'agua'],
+      fibra1: ['fibra 1', 'fibra1'],
+      fibra2: ['fibra 2', 'fibra2']
     };
 
     function testarStorage() {
@@ -836,9 +834,24 @@
       return campo ? (campo.value.trim() || fallback || nomePadraoInsumo(chave)) : (fallback || nomePadraoInsumo(chave));
     }
 
+    function unidadePadraoInsumo(chave) {
+      var material = obterMaterialPorChave(chave);
+      return material ? material.unidade : 'unidade';
+    }
+
+    function obterUnidadeCadastroInsumo(chave, fallback) {
+      var campo = document.getElementById('cadastro-' + chave + '-unidade');
+      return campo ? (campo.value.trim() || fallback || unidadePadraoInsumo(chave)) : (fallback || unidadePadraoInsumo(chave));
+    }
+
     function obterNomeComposicaoInsumo(chave, fallback) {
       var campo = document.getElementById(chave + 'Nome');
       return campo ? (campo.value.trim() || fallback || nomePadraoInsumo(chave)) : (fallback || nomePadraoInsumo(chave));
+    }
+
+    function obterUnidadeComposicaoInsumo(chave, fallback) {
+      var campo = document.getElementById(chave + 'Unidade');
+      return campo ? (campo.value.trim() || fallback || unidadePadraoInsumo(chave)) : (fallback || unidadePadraoInsumo(chave));
     }
 
     function obterFornecedorComposicaoInsumo(chave, fallback) {
@@ -860,6 +873,26 @@
       }
     }
 
+    function atualizarRotulosMaterial(chave) {
+      var unidade = obterUnidadeComposicaoInsumo(chave, unidadePadraoInsumo(chave));
+      var quantidadeLabel = document.getElementById(chave + 'QuantidadeLabel');
+      if (quantidadeLabel) {
+        quantidadeLabel.textContent = 'Quantidade (' + unidade + ')';
+      }
+      var precoLabel = document.getElementById(chave + 'PrecoLabel');
+      if (precoLabel) {
+        precoLabel.textContent = 'Preço (R$/' + unidade + ')';
+      }
+    }
+
+    function definirUnidadeComposicaoInsumo(chave, unidade) {
+      var campo = document.getElementById(chave + 'Unidade');
+      if (campo) {
+        campo.value = unidade || unidadePadraoInsumo(chave);
+      }
+      atualizarRotulosMaterial(chave);
+    }
+
     function obterNomesUsina(usina) {
       var nomes = {};
       for (var i = 0; i < MATERIALS.length; i++) {
@@ -871,10 +904,22 @@
       return nomes;
     }
 
+    function obterUnidadesUsina(usina) {
+      var unidades = {};
+      for (var i = 0; i < MATERIALS.length; i++) {
+        var item = MATERIALS[i];
+        unidades[item.key] = usina && usina.unidades && usina.unidades[item.key]
+          ? String(usina.unidades[item.key]).trim()
+          : item.unidade;
+      }
+      return unidades;
+    }
+
     function normalizarUsina(usina) {
       var registro = usina || {};
       if (!registro.custos) registro.custos = {};
       registro.nomes = obterNomesUsina(registro);
+      registro.unidades = obterUnidadesUsina(registro);
       return registro;
     }
 
@@ -1094,7 +1139,9 @@
             '<h4>' + escapeHtml(item.label) + '</h4>' +
             '<label for="cadastro-' + item.key + '-nome">Nome do insumo</label>' +
             '<input type="text" id="cadastro-' + item.key + '-nome" value="' + escapeHtml(item.label) + '" placeholder="Ex.: ' + escapeHtml(item.label) + '">' +
-            '<label for="cadastro-' + item.key + '-preco">Custo por unidade (R$/kg)</label>' +
+            '<label for="cadastro-' + item.key + '-unidade">Unidade do insumo</label>' +
+            '<input type="text" id="cadastro-' + item.key + '-unidade" value="' + escapeHtml(item.unidade) + '" placeholder="Ex.: kg/m³">' +
+            '<label for="cadastro-' + item.key + '-preco">Custo por unidade (R$/unidade)</label>' +
             '<input type="number" id="cadastro-' + item.key + '-preco" step="0.01" value="0">' +
           '</div>';
       }
@@ -1111,15 +1158,20 @@
             '<h3>' + escapeHtml(item.label) + '</h3>' +
             '<label for="' + item.key + 'Nome">Nome do insumo</label>' +
             '<input type="text" id="' + item.key + 'Nome" value="' + escapeHtml(item.label) + '" placeholder="Ex.: ' + escapeHtml(item.label) + '">' +
-            '<label for="' + item.key + 'Kg">Quantidade (' + escapeHtml(item.unidade) + ')</label>' +
+            '<label for="' + item.key + 'Unidade">Unidade</label>' +
+            '<input type="text" id="' + item.key + 'Unidade" value="' + escapeHtml(item.unidade) + '" placeholder="Ex.: kg/m³">' +
+            '<label id="' + item.key + 'QuantidadeLabel" for="' + item.key + 'Kg">Quantidade (' + escapeHtml(item.unidade) + ')</label>' +
             '<input type="number" id="' + item.key + 'Kg" step="0.01" value="0">' +
             '<label for="' + item.key + 'Fornecedor">Fornecedor / procedência</label>' +
             '<input type="text" id="' + item.key + 'Fornecedor" value="" placeholder="Ex.: CSN">' +
-            '<label for="' + item.key + 'Preco">Preço (R$/kg)</label>' +
+            '<label id="' + item.key + 'PrecoLabel" for="' + item.key + 'Preco">Preço (R$/' + escapeHtml(item.unidade) + ')</label>' +
             '<input type="number" id="' + item.key + 'Preco" step="0.01" value="0">' +
           '</div>';
       }
       container.innerHTML = html;
+      for (var j = 0; j < MATERIALS.length; j++) {
+        atualizarRotulosMaterial(MATERIALS[j].key);
+      }
     }
 
     function renderizarEtapas() {
@@ -1256,6 +1308,7 @@
       for (var i = 0; i < MATERIALS.length; i++) {
         var item = MATERIALS[i];
         var campoNomeId = 'cadastro-' + item.key + '-nome';
+        var campoUnidadeId = 'cadastro-' + item.key + '-unidade';
         var campoId = 'cadastro-' + item.key + '-preco';
         var nomeInsumo = perguntarTexto(
           'Cadastro da usina - ' + item.label + '\n\nInforme o nome do insumo:',
@@ -1267,9 +1320,19 @@
           return;
         }
         document.getElementById(campoNomeId).value = nomeInsumo;
+        var unidadeInsumo = perguntarTexto(
+          'Cadastro da usina - ' + nomeInsumo + '\n\nInforme a unidade do insumo:',
+          document.getElementById(campoUnidadeId).value || item.unidade,
+          false
+        );
+        if (unidadeInsumo === null) {
+          mostrarStatus('Cadastro por perguntas cancelado.', 'warn');
+          return;
+        }
+        document.getElementById(campoUnidadeId).value = unidadeInsumo;
         var valorAtual = document.getElementById(campoId).value || '0';
         var custo = perguntarNumero(
-          'Cadastro da usina - ' + nomeInsumo + '\n\nInforme o custo por unidade (R$/kg):',
+          'Cadastro da usina - ' + nomeInsumo + '\n\nInforme o custo por unidade (R$/' + unidadeInsumo + '):',
           valorAtual,
           true
         );
@@ -1320,8 +1383,9 @@
       for (var i = 0; i < MATERIALS.length; i++) {
         var item = MATERIALS[i];
         var nomeAtual = obterNomeComposicaoInsumo(item.key, item.label);
+        var unidadeAtual = obterUnidadeComposicaoInsumo(item.key, item.unidade);
         var quantidade = perguntarNumero(
-          'Materiais por m³ - ' + nomeAtual + '\n\nInforme a quantidade (' + item.unidade + '):',
+          'Materiais por m³ - ' + nomeAtual + '\n\nInforme a quantidade (' + unidadeAtual + '):',
           document.getElementById(item.key + 'Kg').value || '0',
           true
         );
@@ -1451,8 +1515,8 @@
       var familiasSequenciais = {
         fibra: ['fibra1', 'fibra2'],
         areia: ['areia1', 'areia2', 'areia3'],
-        aditivo: ['aditivo1', 'aditivo2', 'aditivo3'],
-        brita: ['brita1', 'brita2', 'brita3']
+        aditivo: ['aditivo1', 'aditivo2'],
+        brita: ['brita0', 'brita12', 'brita1']
       };
       var indicesFamilia = {
         fibra: 0,
@@ -1604,6 +1668,7 @@
         for (var j = 0; j < MATERIALS.length; j++) {
           var item = MATERIALS[j];
           usina.nomes[item.key] = obterNomeComposicaoInsumo(item.key, item.label);
+          usina.unidades[item.key] = obterUnidadeComposicaoInsumo(item.key, item.unidade);
           var precoAtual = valor(item.key + 'Preco');
           if (precoAtual > 0) {
             usina.custos[item.key] = precoAtual;
@@ -1629,8 +1694,9 @@
         var precoAtual = valor(item.key + 'Preco');
         if (quantidade <= 0 || precoAtual > 0) continue;
         var nomeInsumo = obterNomeComposicaoInsumo(item.key, item.label);
+        var unidadeInsumo = obterUnidadeComposicaoInsumo(item.key, item.unidade);
         var custoInformado = perguntarNumero(
-          'Importação da carta traço - ' + nomeInsumo + '\n\nInforme o custo por unidade (R$/kg):',
+          'Importação da carta traço - ' + nomeInsumo + '\n\nInforme o custo por unidade (R$/' + unidadeInsumo + '):',
           '0',
           true
         );
@@ -1753,6 +1819,15 @@
       return nomes;
     }
 
+    function capturarUnidadesCadastro() {
+      var unidades = {};
+      for (var i = 0; i < MATERIALS.length; i++) {
+        var item = MATERIALS[i];
+        unidades[item.key] = obterUnidadeCadastroInsumo(item.key, item.unidade);
+      }
+      return unidades;
+    }
+
     function capturarMateriaisComposicao() {
       var materiais = [];
       for (var i = 0; i < MATERIALS.length; i++) {
@@ -1760,10 +1835,12 @@
         var quantidade = valor(item.key + 'Kg');
         var preco = valor(item.key + 'Preco');
         var nome = obterNomeComposicaoInsumo(item.key, item.label);
+        var unidade = obterUnidadeComposicaoInsumo(item.key, item.unidade);
         materiais.push({
           key: item.key,
           nome: nome,
           label: nome,
+          unidade: unidade,
           fornecedor: obterFornecedorComposicaoInsumo(item.key),
           quantidade: quantidade,
           preco: preco,
@@ -1782,11 +1859,13 @@
       }
 
       var nomesUsina = obterNomesUsina(usina);
+      var unidadesUsina = obterUnidadesUsina(usina);
       for (var j = 0; j < MATERIALS.length; j++) {
         var item = MATERIALS[j];
         if (!manterNomes) {
           definirNomeComposicaoInsumo(item.key, nomesUsina[item.key] || item.label);
         }
+        definirUnidadeComposicaoInsumo(item.key, unidadesUsina[item.key] || item.unidade);
         var campo = document.getElementById(item.key + 'Preco');
         if (campo) {
           campo.value = resolverCustoInsumo(
@@ -1832,6 +1911,7 @@
         nome: nome,
         dataHora: new Date().toLocaleString('pt-BR'),
         nomes: capturarNomesCadastro(),
+        unidades: capturarUnidadesCadastro(),
         custos: capturarCustosCadastro()
       };
 
@@ -1870,6 +1950,7 @@
           for (var j = 0; j < MATERIALS.length; j++) {
             var item = MATERIALS[j];
             document.getElementById('cadastro-' + item.key + '-nome').value = obterNomesUsina(usina)[item.key] || item.label;
+            document.getElementById('cadastro-' + item.key + '-unidade').value = obterUnidadesUsina(usina)[item.key] || item.unidade;
             document.getElementById('cadastro-' + item.key + '-preco').value = Number(usina.custos[item.key] || 0);
           }
           mostrarStatus('Usina carregada para edição.', 'ok');
@@ -1938,6 +2019,7 @@
       document.getElementById('cadastroUsinaNome').value = '';
       for (var i = 0; i < MATERIALS.length; i++) {
         document.getElementById('cadastro-' + MATERIALS[i].key + '-nome').value = MATERIALS[i].label;
+        document.getElementById('cadastro-' + MATERIALS[i].key + '-unidade').value = MATERIALS[i].unidade;
         document.getElementById('cadastro-' + MATERIALS[i].key + '-preco').value = '0';
       }
     }
@@ -2057,6 +2139,7 @@
           '<tr>' +
             '<td>' + escapeHtml(item.label) + '</td>' +
             '<td>' + escapeHtml(item.fornecedor || '-') + '</td>' +
+            '<td>' + escapeHtml(item.unidade || '-') + '</td>' +
             '<td>' + numero(item.quantidade) + '</td>' +
             '<td>' + moeda(item.preco) + '</td>' +
             '<td>' + moeda(item.subtotal) + '</td>' +
@@ -2076,7 +2159,7 @@
           '<div class="summary-item"><strong>Cliente</strong><span>' + escapeHtml(dados.cliente || '-') + '</span></div>' +
         '</div>' +
         '<h3>Materiais por m³</h3>' +
-        '<div class="table-wrap"><table><thead><tr><th>Insumo</th><th>Fornecedor</th><th>Quantidade</th><th>Preço</th><th>Subtotal</th></tr></thead><tbody>' + linhasMateriais + '</tbody></table></div>' +
+        '<div class="table-wrap"><table><thead><tr><th>Insumo</th><th>Fornecedor</th><th>Unidade</th><th>Quantidade</th><th>Preço</th><th>Subtotal</th></tr></thead><tbody>' + linhasMateriais + '</tbody></table></div>' +
         '<h3>Transporte e entrega</h3>' +
         '<div class="summary-grid">' +
           '<div class="summary-item"><strong>Volume do caminhão</strong><span>' + numero(dados.transporte.volumeCaminhao) + ' m³</span></div>' +
@@ -2164,8 +2247,9 @@
         var item = MATERIALS[i];
         var detalhado = dados.materiaisDetalhados.find(function(material) {
           return material.key === item.key;
-        }) || { quantidade: 0, preco: 0, nome: item.label, label: item.label, fornecedor: '' };
+        }) || { quantidade: 0, preco: 0, nome: item.label, label: item.label, unidade: item.unidade, fornecedor: '' };
         definirNomeComposicaoInsumo(item.key, detalhado.nome || detalhado.label || item.label);
+        definirUnidadeComposicaoInsumo(item.key, detalhado.unidade || item.unidade);
         definirFornecedorComposicaoInsumo(item.key, detalhado.fornecedor || '');
         document.getElementById(item.key + 'Kg').value = Number(detalhado.quantidade || 0);
         document.getElementById(item.key + 'Preco').value = Number(detalhado.preco || 0);
@@ -2252,6 +2336,7 @@
 
       for (var i = 0; i < MATERIALS.length; i++) {
         definirNomeComposicaoInsumo(MATERIALS[i].key, MATERIALS[i].label);
+        definirUnidadeComposicaoInsumo(MATERIALS[i].key, MATERIALS[i].unidade);
         definirFornecedorComposicaoInsumo(MATERIALS[i].key, '');
         document.getElementById(MATERIALS[i].key + 'Kg').value = '0';
         document.getElementById(MATERIALS[i].key + 'Preco').value = '0';
@@ -2333,13 +2418,20 @@
       for (var i = 0; i < MATERIALS.length; i++) {
         (function(item) {
           var campoNome = document.getElementById(item.key + 'Nome');
-          if (!campoNome) return;
-          campoNome.onchange = function() {
-            var usinaId = texto('usinaSelecionada');
-            if (usinaId) {
-              preencherPrecosDaUsina(usinaId, { manterNomes: true });
-            }
-          };
+          var campoUnidade = document.getElementById(item.key + 'Unidade');
+          if (campoNome) {
+            campoNome.onchange = function() {
+              var usinaId = texto('usinaSelecionada');
+              if (usinaId) {
+                preencherPrecosDaUsina(usinaId, { manterNomes: true });
+              }
+            };
+          }
+          if (campoUnidade) {
+            campoUnidade.onchange = function() {
+              atualizarRotulosMaterial(item.key);
+            };
+          }
         })(MATERIALS[i]);
       }
       document.getElementById('usinaSelecionada').onchange = function() {
