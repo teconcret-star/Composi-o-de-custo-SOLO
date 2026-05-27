@@ -444,6 +444,7 @@
           <div class="actions">
             <button id="btnSalvarUsina" class="secondary" type="button">Salvar usina</button>
             <button id="btnLimparUsina" class="warning" type="button">Limpar cadastro</button>
+            <button id="btnIrParaComposicao" class="primary" type="button">Ir para composição</button>
           </div>
         </div>
 
@@ -513,6 +514,10 @@
             <p class="muted">Se ainda não houver usina cadastrada, use a aba de cadastros para incluir a usina antes de continuar.</p>
           </div>
         </div>
+        <div class="actions">
+          <button class="neutral" type="button" onclick="mudarAbaPrincipal('cadastros')">Voltar para Cadastros</button>
+          <button class="primary" type="button" onclick="avancarEtapaManual()">Próxima etapa</button>
+        </div>
       </div>
 
       <div id="step2" class="step-panel">
@@ -532,6 +537,10 @@
           </div>
           <p class="helper">As quantidades podem ser informadas manualmente. Os preços são preenchidos pela usina selecionada, mas ainda podem ser ajustados se necessário.</p>
           <div id="materiaisGrid" class="grid"></div>
+        </div>
+        <div class="actions">
+          <button class="neutral" type="button" onclick="voltarEtapaManual()">Etapa anterior</button>
+          <button class="primary" type="button" onclick="avancarEtapaManual()">Próxima etapa</button>
         </div>
       </div>
 
@@ -574,6 +583,10 @@
             </select>
           </div>
         </div>
+        <div class="actions">
+          <button class="neutral" type="button" onclick="voltarEtapaManual()">Etapa anterior</button>
+          <button class="primary" type="button" onclick="avancarEtapaManual()">Próxima etapa</button>
+        </div>
       </div>
 
       <div id="step4" class="step-panel">
@@ -599,6 +612,10 @@
             <input type="number" id="lucro" step="0.01" value="0">
           </div>
         </div>
+        <div class="actions">
+          <button class="neutral" type="button" onclick="voltarEtapaManual()">Etapa anterior</button>
+          <button class="primary" type="button" onclick="avancarEtapaManual()">Próxima etapa</button>
+        </div>
       </div>
 
       <div id="step5" class="step-panel">
@@ -614,6 +631,7 @@
             <h3>Ações finais</h3>
             <p class="helper">Calcule primeiro. Depois, se desejar, salve a composição no histórico.</p>
             <div class="actions">
+              <button class="neutral" type="button" onclick="voltarEtapaManual()">Etapa anterior</button>
               <button id="btnCalcular" class="primary" type="button">Calcular custo</button>
               <button id="btnSalvar" class="secondary" type="button">Salvar composição</button>
               <button id="btnLimpar" class="warning" type="button">Limpar formulário</button>
@@ -1197,6 +1215,21 @@
         return false;
       }
       return true;
+    }
+
+    function avancarEtapaManual() {
+      var proximaEtapa = etapaAtual + 1;
+      if (proximaEtapa > 4) return;
+      if (!validarEtapa(etapaAtual)) return;
+      limparStatus();
+      irParaEtapa(proximaEtapa);
+    }
+
+    function voltarEtapaManual() {
+      var etapaAnterior = etapaAtual - 1;
+      if (etapaAnterior < 0) return;
+      limparStatus();
+      irParaEtapa(etapaAnterior);
     }
 
     function focarCampo(id) {
@@ -2191,6 +2224,11 @@
 
       document.getElementById('btnSalvarUsina').onclick = salvarCadastroUsina;
       document.getElementById('btnLimparUsina').onclick = limparCadastroUsina;
+      document.getElementById('btnIrParaComposicao').onclick = function() {
+        mudarAbaPrincipal('composicao');
+        irParaEtapa(0);
+        mostrarStatus('Você está na composição. Use os botões de etapa para avançar.', 'ok');
+      };
       document.getElementById('btnImportarTracoPdf').onclick = function() {
         mudarAbaPrincipal('composicao');
         importarTracoPdf();
