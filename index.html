@@ -63,6 +63,34 @@
       background: #fafcff;
     }
 
+    .tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 14px 0 20px;
+    }
+
+    .tab-btn {
+      background: #e8eef5;
+      color: #1b3a57;
+      border: 1px solid #c8d6e5;
+      padding: 10px 14px;
+    }
+
+    .tab-btn.active {
+      background: #1f6feb;
+      border-color: #1f6feb;
+      color: #fff;
+    }
+
+    .main-tab-content {
+      display: none;
+    }
+
+    .main-tab-content.active {
+      display: block;
+    }
+
     .guide {
       border: 1px solid #dbe7f3;
       background: #f5f9ff;
@@ -128,6 +156,7 @@
       padding: 12px 14px;
       border-radius: 10px;
       margin-bottom: 16px;
+      display: none;
     }
 
     label {
@@ -300,6 +329,36 @@
       display: none;
     }
 
+    #cadastroCustos,
+    #materiaisGrid {
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 10px;
+    }
+
+    #cadastroCustos .card,
+    #materiaisGrid .card {
+      padding: 10px;
+    }
+
+    #cadastroCustos h4,
+    #materiaisGrid h3 {
+      margin: 0 0 8px;
+      font-size: 14px;
+    }
+
+    #cadastroCustos label,
+    #materiaisGrid label {
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+
+    #cadastroCustos input,
+    #materiaisGrid input {
+      padding: 7px;
+      font-size: 13px;
+      margin-bottom: 7px;
+    }
+
     @media print {
       body {
         background: white;
@@ -366,7 +425,13 @@
 
     <div id="status" class="status"></div>
 
-    <section id="cadastroUsina">
+    <div class="tabs" id="mainTabs">
+      <button class="tab-btn active" type="button" data-tab-target="cadastros">Aba 1: Cadastros</button>
+      <button class="tab-btn" type="button" data-tab-target="composicao">Aba 2: Composição de custo</button>
+      <button class="tab-btn" type="button" data-tab-target="historico">Aba 3: Histórico</button>
+    </div>
+
+    <section id="cadastroUsina" class="main-tab-content active" data-main-tab="cadastros">
       <h2 class="section-title">1. Cadastro de usinas e custos dos insumos</h2>
       <div class="guide">
         <strong>Como usar</strong>
@@ -409,7 +474,7 @@
       </div>
     </section>
 
-    <section id="composicaoSection">
+    <section id="composicaoSection" class="main-tab-content" data-main-tab="composicao">
       <h2 class="section-title">2. Composição de custo guiada</h2>
       <div class="guide">
         <strong>Fluxo guiado</strong>
@@ -432,6 +497,9 @@
               <option value="">Selecione uma usina</option>
             </select>
             <p class="helper">Ao selecionar a usina, os preços dos insumos serão preenchidos automaticamente.</p>
+
+            <label for="familiaConcreto">Família do concreto</label>
+            <input type="text" id="familiaConcreto" placeholder="Ex.: FCK 30 bombeável">
 
             <label for="nomeObra">Nome da obra</label>
             <input type="text" id="nomeObra" placeholder="Ex.: Fundação galpão A">
@@ -465,6 +533,16 @@
           <strong>Pergunta 2:</strong> quais quantidades por m³ serão usadas na composição e quais preços vieram da usina?
         </div>
         <div class="card">
+          <h3>Importar traço de concreto (PDF)</h3>
+          <div class="grid-2">
+            <div>
+              <label for="arquivoTracoPdf">Arquivo PDF (ex.: CT_220.pdf)</label>
+              <input type="file" id="arquivoTracoPdf" accept=".pdf,application/pdf">
+            </div>
+            <div class="actions">
+              <button id="btnImportarTracoPdf" class="secondary" type="button">Importar traço e calcular MCC</button>
+            </div>
+          </div>
           <p class="helper">As quantidades podem ser informadas manualmente. Os preços são preenchidos pela usina selecionada, mas ainda podem ser ajustados se necessário.</p>
           <div id="materiaisGrid" class="grid"></div>
         </div>
@@ -574,7 +652,7 @@
       </div>
     </section>
 
-    <section id="resultadoSection" class="result-box hidden">
+    <section id="resultadoSection" class="result-box hidden main-tab-content" data-main-tab="composicao">
       <h2>Resultado</h2>
       <div class="result-grid">
         <div>
@@ -612,7 +690,7 @@
       </div>
     </section>
 
-    <section id="extratoSection" class="extract-box hidden">
+    <section id="extratoSection" class="extract-box hidden main-tab-content" data-main-tab="composicao">
       <h2>Extrato completo da composição</h2>
       <div id="extratoConteudo"></div>
       <div class="actions">
@@ -620,7 +698,7 @@
       </div>
     </section>
 
-    <section id="historicoSection">
+    <section id="historicoSection" class="main-tab-content" data-main-tab="historico">
       <h2 class="section-title">3. Histórico das composições</h2>
       <div class="table-wrap">
         <table>
@@ -628,6 +706,7 @@
             <tr>
               <th>Data</th>
               <th>Usina</th>
+              <th>Família</th>
               <th>Obra</th>
               <th>Cliente</th>
               <th>Carga</th>
@@ -642,6 +721,7 @@
     </section>
   </div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.js"></script>
   <script>
     var MATERIALS = [
       { key: 'cimento', label: 'Cimento', unidade: 'kg/m³' },
@@ -671,6 +751,22 @@
     var MOBILE_BREAKPOINT = 720;
     var MOBILE_WIZARD_DELAY_MS = 300;
     var IMPOSTO_OPCOES = ['4', '5', '6', '7', '8', '9', '10'];
+    var abaPrincipalAtiva = 'cadastros';
+    var MATERIAL_ALIASES = {
+      cimento: ['cimento'],
+      adicao: ['adição', 'adicao'],
+      fibra1: ['fibra 1', 'fibra1'],
+      fibra2: ['fibra 2', 'fibra2'],
+      areia1: ['areia 1', 'areia1'],
+      areia2: ['areia 2', 'areia2'],
+      areia3: ['areia 3', 'areia3'],
+      aditivo1: ['aditivo 1', 'aditivo1'],
+      aditivo2: ['aditivo 2', 'aditivo2'],
+      aditivo3: ['aditivo 3', 'aditivo3'],
+      brita1: ['brita 1', 'brita1'],
+      brita2: ['brita 2', 'brita2'],
+      brita3: ['brita 3', 'brita3']
+    };
 
     function testarStorage() {
       try {
@@ -728,6 +824,48 @@
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
+    }
+
+    function normalizarTextoBusca(txt) {
+      return String(txt || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase();
+    }
+
+    function mudarAbaPrincipal(aba) {
+      abaPrincipalAtiva = aba;
+      var botoes = document.querySelectorAll('[data-tab-target]');
+      var conteudos = document.querySelectorAll('[data-main-tab]');
+
+      for (var i = 0; i < botoes.length; i++) {
+        botoes[i].classList.toggle('active', botoes[i].getAttribute('data-tab-target') === aba);
+      }
+
+      for (var j = 0; j < conteudos.length; j++) {
+        var elemento = conteudos[j];
+        var ehDaAba = elemento.getAttribute('data-main-tab') === aba;
+        if (ehDaAba && !elemento.classList.contains('hidden')) {
+          elemento.classList.add('active');
+        } else if (ehDaAba && elemento.classList.contains('hidden') && (elemento.id === 'resultadoSection' || elemento.id === 'extratoSection')) {
+          elemento.classList.remove('active');
+        } else {
+          elemento.classList.remove('active');
+        }
+      }
+    }
+
+    function configurarAbasPrincipais() {
+      var botoes = document.querySelectorAll('[data-tab-target]');
+      for (var i = 0; i < botoes.length; i++) {
+        (function(botao) {
+          botao.onclick = function() {
+            limparStatus();
+            mudarAbaPrincipal(botao.getAttribute('data-tab-target'));
+          };
+        })(botoes[i]);
+      }
+      mudarAbaPrincipal(abaPrincipalAtiva);
     }
 
     function obterLista(chave) {
@@ -966,6 +1104,7 @@
 
     function iniciarComposicaoPorPerguntas(usinaSugerida) {
       limparStatus();
+      mudarAbaPrincipal('composicao');
       var usinaId = perguntarUsina(usinaSugerida);
       if (usinaId === null) {
         mostrarStatus('Preenchimento da composição por perguntas cancelado.', 'warn');
@@ -1105,6 +1244,93 @@
       }, MOBILE_WIZARD_DELAY_MS); // Aguarda o primeiro paint no mobile antes de abrir os diálogos.
     }
 
+    function interpretarTracoTexto(textoBruto) {
+      var textoBase = normalizarTextoBusca(textoBruto).replace(/\s+/g, ' ');
+      var quantidades = {};
+      var totalEncontrado = 0;
+
+      for (var i = 0; i < MATERIALS.length; i++) {
+        var item = MATERIALS[i];
+        var aliases = MATERIAL_ALIASES[item.key] || [item.label, item.key];
+        var valorEncontrado = null;
+
+        for (var j = 0; j < aliases.length; j++) {
+          var aliasEscapado = normalizarTextoBusca(aliases[j]).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          var regexCurto = new RegExp(aliasEscapado + '\\s*[:\\-]?\\s*(\\d+(?:[\\.,]\\d+)?)', 'i');
+          var regexAmplo = new RegExp(aliasEscapado + '[^\\d]{0,30}(\\d+(?:[\\.,]\\d+)?)', 'i');
+          var match = textoBase.match(regexCurto) || textoBase.match(regexAmplo);
+          if (match && match[1]) {
+            valorEncontrado = parseFloat(String(match[1]).replace(',', '.'));
+            if (!isNaN(valorEncontrado)) break;
+          }
+        }
+
+        quantidades[item.key] = isNaN(valorEncontrado) || valorEncontrado == null ? 0 : valorEncontrado;
+        if (quantidades[item.key] > 0) totalEncontrado++;
+      }
+
+      return {
+        quantidades: quantidades,
+        totalEncontrado: totalEncontrado
+      };
+    }
+
+    async function importarTracoPdf() {
+      limparStatus();
+      var campoArquivo = document.getElementById('arquivoTracoPdf');
+      var botao = document.getElementById('btnImportarTracoPdf');
+      var arquivo = campoArquivo.files && campoArquivo.files[0];
+
+      if (!arquivo) {
+        mostrarStatus('Selecione o arquivo PDF do traço para importar.', 'warn');
+        return;
+      }
+
+      if (!window.pdfjsLib || !window.pdfjsLib.getDocument) {
+        mostrarStatus('Não foi possível carregar o leitor de PDF no navegador.', 'error');
+        return;
+      }
+
+      try {
+        botao.disabled = true;
+        botao.textContent = 'Importando...';
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.js';
+
+        var data = await arquivo.arrayBuffer();
+        var pdf = await window.pdfjsLib.getDocument({ data: data }).promise;
+        var textoCompleto = '';
+
+        for (var i = 1; i <= pdf.numPages; i++) {
+          var page = await pdf.getPage(i);
+          var conteudo = await page.getTextContent();
+          var linhasPagina = conteudo.items.map(function(item) { return item.str; }).join('\n');
+          textoCompleto += '\n' + linhasPagina;
+        }
+
+        var leitura = interpretarTracoTexto(textoCompleto);
+        if (!leitura.totalEncontrado) {
+          mostrarStatus('Não foi possível identificar quantidades de insumos no PDF enviado.', 'error');
+          return;
+        }
+
+        for (var j = 0; j < MATERIALS.length; j++) {
+          var material = MATERIALS[j];
+          document.getElementById(material.key + 'Kg').value = Number(leitura.quantidades[material.key] || 0);
+        }
+
+        irParaEtapa(4);
+        var dadosCalculados = calcular();
+        if (dadosCalculados) {
+          mostrarStatus('Traço importado do PDF, composição preenchida e custo MCC calculado.', 'ok');
+        }
+      } catch (e) {
+        mostrarStatus('Falha ao importar o PDF do traço: ' + e.message, 'error');
+      } finally {
+        botao.disabled = false;
+        botao.textContent = 'Importar traço e calcular MCC';
+      }
+    }
+
     function capturarCustosCadastro() {
       var custos = {};
       for (var i = 0; i < MATERIALS.length; i++) {
@@ -1235,6 +1461,7 @@
     }
 
     function aplicarUsinaNaComposicao(id) {
+      mudarAbaPrincipal('composicao');
       document.getElementById('usinaSelecionada').value = String(id);
       preencherPrecosDaUsina(id);
       irParaEtapa(0);
@@ -1297,6 +1524,7 @@
 
     function capturarDadosFormulario() {
       return {
+        familiaConcreto: texto('familiaConcreto'),
         nomeObra: texto('nomeObra'),
         cliente: texto('cliente'),
         usinaId: texto('usinaSelecionada'),
@@ -1362,6 +1590,7 @@
       return {
         id: Date.now(),
         dataHora: new Date().toLocaleString('pt-BR'),
+        familiaConcreto: dadosFormulario.familiaConcreto,
         nomeObra: dadosFormulario.nomeObra,
         cliente: dadosFormulario.cliente,
         usinaId: dadosFormulario.usinaId,
@@ -1384,6 +1613,9 @@
 
     function preencherResultados(dados) {
       document.getElementById('resultadoSection').classList.remove('hidden');
+      if (abaPrincipalAtiva === 'composicao') {
+        document.getElementById('resultadoSection').classList.add('active');
+      }
       document.getElementById('resultadoMateriais').value = moeda(dados.materiais);
       document.getElementById('resultadoViagem').value = moeda(dados.custoViagem);
       document.getElementById('resultadoEntrega').value = moeda(dados.custoEntrega);
@@ -1411,10 +1643,14 @@
       }
 
       document.getElementById('extratoSection').classList.remove('hidden');
+      if (abaPrincipalAtiva === 'composicao') {
+        document.getElementById('extratoSection').classList.add('active');
+      }
       document.getElementById('extratoConteudo').innerHTML =
         '<div class="summary-grid">' +
           '<div class="summary-item"><strong>Usina</strong><span>' + escapeHtml(dados.usinaNome || '-') + '</span></div>' +
           '<div class="summary-item"><strong>Data do cálculo</strong><span>' + escapeHtml(dados.dataHora || '-') + '</span></div>' +
+          '<div class="summary-item"><strong>Família do concreto</strong><span>' + escapeHtml(dados.familiaConcreto || '-') + '</span></div>' +
           '<div class="summary-item"><strong>Obra</strong><span>' + escapeHtml(dados.nomeObra || '-') + '</span></div>' +
           '<div class="summary-item"><strong>Cliente</strong><span>' + escapeHtml(dados.cliente || '-') + '</span></div>' +
         '</div>' +
@@ -1485,12 +1721,13 @@
       var historico = obterHistorico();
       for (var i = 0; i < historico.length; i++) {
         if (String(historico[i].id) === String(id)) {
+          mudarAbaPrincipal('composicao');
           preencherFormularioComposicao(historico[i]);
           ultimoCalculo = historico[i];
           preencherResultados(historico[i]);
           renderizarExtrato(historico[i]);
           irParaEtapa(4);
-          mostrarStatus('Composição carregada a partir do histórico.', 'ok');
+          mostrarStatus('Composição carregada para edição a partir do histórico.', 'ok');
           return;
         }
       }
@@ -1498,6 +1735,7 @@
 
     function preencherFormularioComposicao(dados) {
       document.getElementById('usinaSelecionada').value = String(dados.usinaId || '');
+      document.getElementById('familiaConcreto').value = dados.familiaConcreto || '';
       document.getElementById('nomeObra').value = dados.nomeObra || '';
       document.getElementById('cliente').value = dados.cliente || '';
 
@@ -1557,7 +1795,7 @@
       tbody.innerHTML = '';
 
       if (!historico.length) {
-        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Nenhuma composição salva ainda.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Nenhuma composição salva ainda.</td></tr>';
         return;
       }
 
@@ -1567,6 +1805,7 @@
         tr.innerHTML =
           '<td>' + escapeHtml(item.dataHora || '') + '</td>' +
           '<td>' + escapeHtml(item.usinaNome || '') + '</td>' +
+          '<td>' + escapeHtml(item.familiaConcreto || '') + '</td>' +
           '<td>' + escapeHtml(item.nomeObra || '') + '</td>' +
           '<td>' + escapeHtml(item.cliente || '') + '</td>' +
           '<td>' + numero(item.volumeCarga || 0) + '</td>' +
@@ -1574,7 +1813,7 @@
           '<td>' + moeda(item.custoFinal) + '</td>' +
           '<td>' +
             '<div class="actions">' +
-              '<button class="primary" type="button" onclick="carregarComposicao(' + Number(item.id) + ')">Ver extrato</button>' +
+              '<button class="primary" type="button" onclick="carregarComposicao(' + Number(item.id) + ')">Editar</button>' +
               '<button class="danger" type="button" onclick="excluirItem(' + Number(item.id) + ')">Excluir</button>' +
             '</div>' +
           '</td>';
@@ -1584,6 +1823,7 @@
 
     function limparCampos() {
       document.getElementById('usinaSelecionada').value = '';
+      document.getElementById('familiaConcreto').value = '';
       document.getElementById('nomeObra').value = '';
       document.getElementById('cliente').value = '';
 
@@ -1611,7 +1851,9 @@
 
       ultimoCalculo = null;
       document.getElementById('resultadoSection').classList.add('hidden');
+      document.getElementById('resultadoSection').classList.remove('active');
       document.getElementById('extratoSection').classList.add('hidden');
+      document.getElementById('extratoSection').classList.remove('active');
       document.getElementById('extratoConteudo').innerHTML = '';
       limparStatus();
       atualizarPainelResumo();
@@ -1649,6 +1891,7 @@
       renderizarCamposMateriais();
       renderizarEtapas();
       configurarNavegacao();
+      configurarAbasPrincipais();
       renderizarUsinas();
       atualizarSelectUsinas();
       renderizarHistorico();
@@ -1658,6 +1901,10 @@
       document.getElementById('btnLimparUsina').onclick = limparCadastroUsina;
       document.getElementById('btnAssistenteUsina').onclick = iniciarCadastroPorPerguntas;
       document.getElementById('btnAssistenteComposicao').onclick = iniciarComposicaoPorPerguntas;
+      document.getElementById('btnImportarTracoPdf').onclick = function() {
+        mudarAbaPrincipal('composicao');
+        importarTracoPdf();
+      };
       document.getElementById('usinaSelecionada').onchange = function() {
         if (this.value) {
           preencherPrecosDaUsina(this.value);
