@@ -1430,12 +1430,13 @@
       }
 
       function extrairCampoCabecalho(prefixo) {
+        var totalTokensPrefixo = String(prefixo || '').trim().split(/\s+/).filter(Boolean).length;
         for (var indice = 0; indice < linhas.length; indice++) {
           var linhaOriginal = linhas[indice];
           var linhaNormalizada = normalizarTextoBusca(linhaOriginal);
           var prefixoNormalizado = normalizarTextoBusca(prefixo);
           if (linhaNormalizada.indexOf(prefixoNormalizado + ' ') === 0) {
-            return linhaOriginal.substring(prefixo.length).trim();
+            return linhaOriginal.split(/\s+/).slice(totalTokensPrefixo).join(' ').trim();
           }
         }
         return '';
@@ -1449,7 +1450,7 @@
         var tokensOriginais = linhaOriginal.split(' ');
         var indicesNumericos = [];
         for (var indice = 0; indice < tokensOriginais.length; indice++) {
-          if (/^-?\d+(?:\/\d+)?(?:[\.,]\d+)?$/.test(tokensOriginais[indice])) {
+          if (/^-?(?:\d+\/\d+|\d+(?:[\.,]\d+)?)$/.test(tokensOriginais[indice])) {
             indicesNumericos.push(indice);
           }
         }
