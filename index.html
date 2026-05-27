@@ -99,10 +99,6 @@
       margin-bottom: 20px;
     }
 
-    .wizard-launch {
-      margin-top: 12px;
-    }
-
     .guide strong {
       display: block;
       margin-bottom: 6px;
@@ -436,9 +432,6 @@
       <div class="guide">
         <strong>Como usar</strong>
         <span>Cadastre primeiro a usina e os custos por unidade. Depois, na composição de custo, basta selecionar a usina para preencher automaticamente os preços dos insumos.</span>
-        <div class="actions wizard-launch">
-          <button id="btnAssistenteUsina" class="primary" type="button">Lançar custos por perguntas</button>
-        </div>
       </div>
 
       <div class="grid-2">
@@ -478,17 +471,14 @@
       <h2 class="section-title">2. Composição de custo guiada</h2>
       <div class="guide">
         <strong>Fluxo guiado</strong>
-        <span>Responda cada etapa na sequência. Ao final, use a opção <em>Calcular custo</em> para gerar o resultado e o extrato.</span>
-        <div class="actions wizard-launch">
-          <button id="btnAssistenteComposicao" class="primary" type="button">Preencher composição por perguntas</button>
-        </div>
+        <span>Preencha os campos na sequência. O sistema avança de forma automática e mostra orientações para concluir o cálculo.</span>
       </div>
 
       <div id="steps" class="steps"></div>
 
       <div id="step1" class="step-panel active">
         <div class="question-box">
-          <strong>Pergunta 1:</strong> qual usina será usada e quais são os dados básicos da composição?
+          <strong>Etapa 1:</strong> qual usina será usada e quais são os dados básicos da composição?
         </div>
         <div class="grid-2">
           <div class="card">
@@ -520,17 +510,14 @@
                 <span id="resumoAutoPreco">Aguardando seleção da usina.</span>
               </div>
             </div>
-            <p class="muted">Se ainda não houver usina cadastrada, volte ao passo anterior e faça o cadastro primeiro.</p>
+            <p class="muted">Se ainda não houver usina cadastrada, use a aba de cadastros para incluir a usina antes de continuar.</p>
           </div>
-        </div>
-        <div class="actions">
-          <button class="primary" type="button" data-next="1">Próxima pergunta</button>
         </div>
       </div>
 
       <div id="step2" class="step-panel">
         <div class="question-box">
-          <strong>Pergunta 2:</strong> quais quantidades por m³ serão usadas na composição e quais preços vieram da usina?
+          <strong>Etapa 2:</strong> quais quantidades por m³ serão usadas na composição e quais preços vieram da usina?
         </div>
         <div class="card">
           <h3>Importar traço de concreto (PDF)</h3>
@@ -546,15 +533,11 @@
           <p class="helper">As quantidades podem ser informadas manualmente. Os preços são preenchidos pela usina selecionada, mas ainda podem ser ajustados se necessário.</p>
           <div id="materiaisGrid" class="grid"></div>
         </div>
-        <div class="actions">
-          <button class="neutral" type="button" data-prev="0">Pergunta anterior</button>
-          <button class="primary" type="button" data-next="2">Próxima pergunta</button>
-        </div>
       </div>
 
       <div id="step3" class="step-panel">
         <div class="question-box">
-          <strong>Pergunta 3:</strong> como será o transporte e a entrega desta carga?
+          <strong>Etapa 3:</strong> como será o transporte e a entrega desta carga?
         </div>
         <div class="grid-2">
           <div class="card">
@@ -591,15 +574,11 @@
             </select>
           </div>
         </div>
-        <div class="actions">
-          <button class="neutral" type="button" data-prev="1">Pergunta anterior</button>
-          <button class="primary" type="button" data-next="3">Próxima pergunta</button>
-        </div>
       </div>
 
       <div id="step4" class="step-panel">
         <div class="question-box">
-          <strong>Pergunta 4:</strong> qual imposto e qual lucro devem ser considerados?
+          <strong>Etapa 4:</strong> qual imposto e qual lucro devem ser considerados?
         </div>
         <div class="grid-2">
           <div class="card">
@@ -620,15 +599,11 @@
             <input type="number" id="lucro" step="0.01" value="0">
           </div>
         </div>
-        <div class="actions">
-          <button class="neutral" type="button" data-prev="2">Pergunta anterior</button>
-          <button class="primary" type="button" data-next="4">Ir para cálculo final</button>
-        </div>
       </div>
 
       <div id="step5" class="step-panel">
         <div class="question-box">
-          <strong>Pergunta 5:</strong> deseja calcular o custo agora e gerar o extrato completo?
+          <strong>Etapa 5:</strong> deseja calcular o custo agora e gerar o extrato completo?
         </div>
         <div class="grid-2">
           <div class="card">
@@ -645,9 +620,6 @@
               <button id="btnApagar" class="danger" type="button">Apagar histórico</button>
             </div>
           </div>
-        </div>
-        <div class="actions">
-          <button class="neutral" type="button" data-prev="3">Pergunta anterior</button>
         </div>
       </div>
     </section>
@@ -747,8 +719,6 @@
     };
     var ultimoCalculo = null;
     var etapaAtual = 0;
-    var MOBILE_BREAKPOINT = 720;
-    var MOBILE_WIZARD_DELAY_MS = 300;
     var IMPOSTO_OPCOES = ['4', '5', '6', '7', '8', '9', '10'];
     var abaPrincipalAtiva = 'cadastros';
     var pdfJsLoadingPromise = null;
@@ -1229,273 +1199,54 @@
       return true;
     }
 
-    function perguntarTexto(titulo, valorPadrao, permitirVazio) {
-      while (true) {
-        var resposta = prompt(titulo, valorPadrao == null ? '' : String(valorPadrao));
-        if (resposta === null) return null;
-        var textoLimpo = resposta.trim();
-        if (!textoLimpo && !permitirVazio) {
-          alert('Preencha a informação para continuar.');
-          continue;
-        }
-        return textoLimpo;
+    function focarCampo(id) {
+      var campo = document.getElementById(id);
+      if (!campo) return;
+      campo.focus();
+      if (campo.tagName === 'INPUT') {
+        campo.select();
       }
     }
 
-    function perguntarNumero(titulo, valorPadrao, permitirZero) {
-      while (true) {
-        var resposta = prompt(titulo, valorPadrao == null ? '0' : String(valorPadrao));
-        if (resposta === null) return null;
-        var numeroValor = parseFloat(String(resposta).replace(',', '.'));
-        if (isNaN(numeroValor)) {
-          alert('Informe um número válido.');
-          continue;
-        }
-        if (!permitirZero && numeroValor <= 0) {
-          alert('Informe um valor maior que zero.');
-          continue;
-        }
-        return numeroValor;
-      }
+    function campoPreenchido(campo) {
+      if (!campo) return false;
+      return String(campo.value || '').trim() !== '';
     }
 
-    function perguntarUsina(usinaSugerida) {
-      var usinas = obterUsinas();
-      if (!usinas.length) {
-        mostrarStatus('Cadastre ao menos uma usina antes de iniciar o preenchimento por perguntas.', 'error');
-        return null;
-      }
+    function configurarSequenciaCampos(ids, opcoes) {
+      for (var i = 0; i < ids.length; i++) {
+        (function(indice) {
+          var campo = document.getElementById(ids[indice]);
+          if (!campo) return;
 
-      if (usinaSugerida) {
-        for (var i = 0; i < usinas.length; i++) {
-          if (String(usinas[i].id) === String(usinaSugerida)) {
-            return String(usinaSugerida);
+          function avancar() {
+            if (!campoPreenchido(campo)) return;
+            var proximoId = ids[indice + 1];
+            if (proximoId) {
+              focarCampo(proximoId);
+              return;
+            }
+
+            if (!opcoes || opcoes.proximaEtapa === null || opcoes.proximaEtapa === undefined || etapaAtual !== opcoes.etapaAtual) return;
+            if (!validarEtapa(opcoes.etapaAtual)) return;
+            limparStatus();
+            irParaEtapa(opcoes.proximaEtapa);
+            if (opcoes.mensagem) {
+              mostrarStatus(opcoes.mensagem, 'ok');
+            }
+            if (opcoes.foco) {
+              focarCampo(opcoes.foco);
+            }
           }
-        }
+
+          campo.addEventListener('change', avancar);
+          campo.addEventListener('keydown', function(event) {
+            if (event.key !== 'Enter') return;
+            event.preventDefault();
+            avancar();
+          });
+        })(i);
       }
-
-      var textoLista = [];
-      for (var j = 0; j < usinas.length; j++) {
-        textoLista.push((j + 1) + ' - ' + usinas[j].nome);
-      }
-
-      while (true) {
-        var resposta = prompt(
-          'Pergunta 1: Escolha a usina pelo número:\n\n' + textoLista.join('\n'),
-          '1'
-        );
-        if (resposta === null) return null;
-        var indice = parseInt(resposta, 10);
-        if (isNaN(indice) || indice < 1 || indice > usinas.length) {
-          alert('Escolha um número da lista.');
-          continue;
-        }
-        return String(usinas[indice - 1].id);
-      }
-    }
-
-    function iniciarCadastroPorPerguntas() {
-      limparStatus();
-      var nomeUsina = perguntarTexto('Cadastro da usina\n\nInforme o nome da usina:', texto('cadastroUsinaNome'), false);
-      if (nomeUsina === null) {
-        mostrarStatus('Cadastro por perguntas cancelado.', 'warn');
-        return;
-      }
-
-      document.getElementById('cadastroUsinaId').value = '';
-      document.getElementById('cadastroUsinaNome').value = nomeUsina;
-
-      for (var i = 0; i < MATERIALS.length; i++) {
-        var item = MATERIALS[i];
-        var campoNomeId = 'cadastro-' + item.key + '-nome';
-        var campoUnidadeId = 'cadastro-' + item.key + '-unidade';
-        var campoId = 'cadastro-' + item.key + '-preco';
-        var nomeInsumo = perguntarTexto(
-          'Cadastro da usina - ' + item.label + '\n\nInforme o nome do insumo:',
-          document.getElementById(campoNomeId).value || item.label,
-          false
-        );
-        if (nomeInsumo === null) {
-          mostrarStatus('Cadastro por perguntas cancelado.', 'warn');
-          return;
-        }
-        document.getElementById(campoNomeId).value = nomeInsumo;
-        var unidadeInsumo = perguntarTexto(
-          'Cadastro da usina - ' + nomeInsumo + '\n\nInforme a unidade do insumo:',
-          document.getElementById(campoUnidadeId).value || item.unidade,
-          false
-        );
-        if (unidadeInsumo === null) {
-          mostrarStatus('Cadastro por perguntas cancelado.', 'warn');
-          return;
-        }
-        document.getElementById(campoUnidadeId).value = unidadeInsumo;
-        var valorAtual = document.getElementById(campoId).value || '0';
-        var custo = perguntarNumero(
-          'Cadastro da usina - ' + nomeInsumo + '\n\nInforme o custo por unidade (R$/' + unidadeInsumo + '):',
-          valorAtual,
-          true
-        );
-        if (custo === null) {
-          mostrarStatus('Cadastro por perguntas cancelado.', 'warn');
-          return;
-        }
-        document.getElementById(campoId).value = String(custo);
-      }
-
-      var usinaSalvaId = salvarCadastroUsina();
-      if (!usinaSalvaId) return;
-      document.getElementById('usinaSelecionada').value = String(usinaSalvaId);
-      preencherPrecosDaUsina(usinaSalvaId);
-      irParaEtapa(0);
-
-      if (confirm('Usina salva. Deseja continuar no modo perguntas para preencher e calcular o MCC?')) {
-        iniciarComposicaoPorPerguntas(usinaSalvaId);
-      }
-    }
-
-    function iniciarComposicaoPorPerguntas(usinaSugerida) {
-      limparStatus();
-      mudarAbaPrincipal('composicao');
-      var usinaId = perguntarUsina(usinaSugerida);
-      if (usinaId === null) {
-        mostrarStatus('Preenchimento da composição por perguntas cancelado.', 'warn');
-        return;
-      }
-
-      document.getElementById('usinaSelecionada').value = usinaId;
-      preencherPrecosDaUsina(usinaId);
-
-      var nomeObra = perguntarTexto('Composição MCC\n\nInforme o nome da obra:', texto('nomeObra'), true);
-      if (nomeObra === null) {
-        mostrarStatus('Preenchimento da composição por perguntas cancelado.', 'warn');
-        return;
-      }
-      document.getElementById('nomeObra').value = nomeObra;
-
-      var cliente = perguntarTexto('Composição MCC\n\nInforme o cliente:', texto('cliente'), true);
-      if (cliente === null) {
-        mostrarStatus('Preenchimento da composição por perguntas cancelado.', 'warn');
-        return;
-      }
-      document.getElementById('cliente').value = cliente;
-
-      for (var i = 0; i < MATERIALS.length; i++) {
-        var item = MATERIALS[i];
-        var nomeAtual = obterNomeComposicaoInsumo(item.key, item.label);
-        var unidadeAtual = obterUnidadeComposicaoInsumo(item.key, item.unidade);
-        var quantidade = perguntarNumero(
-          'Materiais por m³ - ' + nomeAtual + '\n\nInforme a quantidade (' + unidadeAtual + '):',
-          document.getElementById(item.key + 'Kg').value || '0',
-          true
-        );
-        if (quantidade === null) {
-          mostrarStatus('Preenchimento da composição por perguntas cancelado.', 'warn');
-          return;
-        }
-        document.getElementById(item.key + 'Kg').value = String(quantidade);
-      }
-
-      var perguntasTransporte = [
-        { id: 'volumeCaminhao', titulo: 'Transporte\n\nVolume do caminhão (m³):', permitirZero: true },
-        { id: 'volumeCarga', titulo: 'Transporte\n\nQuantidade entregue / carga da viagem (m³):', permitirZero: false },
-        { id: 'distancia', titulo: 'Transporte\n\nDistância até a obra (km):', permitirZero: true },
-        { id: 'consumo', titulo: 'Transporte\n\nConsumo do caminhão (km/l):', permitirZero: true },
-        { id: 'precoCombustivel', titulo: 'Transporte\n\nPreço do combustível (R$/l):', permitirZero: true },
-        { id: 'pedagio', titulo: 'Transporte\n\nPedágio total da viagem (R$):', permitirZero: true },
-        { id: 'taxaServico', titulo: 'Transporte\n\nTaxa de serviço (R$ por viagem):', permitirZero: true },
-        { id: 'depreciacao', titulo: 'Transporte\n\nDepreciação do caminhão (R$ por viagem):', permitirZero: true }
-      ];
-
-      for (var j = 0; j < perguntasTransporte.length; j++) {
-        var pergunta = perguntasTransporte[j];
-        var respostaTransporte = perguntarNumero(
-          pergunta.titulo,
-          document.getElementById(pergunta.id).value || '0',
-          pergunta.permitirZero
-        );
-        if (respostaTransporte === null) {
-          mostrarStatus('Preenchimento da composição por perguntas cancelado.', 'warn');
-          return;
-        }
-        document.getElementById(pergunta.id).value = String(respostaTransporte);
-      }
-
-      while (true) {
-        var idaVolta = prompt('Transporte\n\nConsiderar ida e volta?\n1 - Não\n2 - Sim', document.getElementById('idaVolta').value || '2');
-        if (idaVolta === null) {
-          mostrarStatus('Preenchimento da composição por perguntas cancelado.', 'warn');
-          return;
-        }
-        if (idaVolta !== '1' && idaVolta !== '2') {
-          alert('Escolha 1 para Não ou 2 para Sim.');
-          continue;
-        }
-        document.getElementById('idaVolta').value = idaVolta;
-        break;
-      }
-
-      while (true) {
-        var imposto = prompt(
-          'Tributação\n\nEscolha o imposto da NF (' + IMPOSTO_OPCOES[0] + ' a ' + IMPOSTO_OPCOES[IMPOSTO_OPCOES.length - 1] + '):',
-          document.getElementById('imposto').value || '8'
-        );
-        if (imposto === null) {
-          mostrarStatus('Preenchimento da composição por perguntas cancelado.', 'warn');
-          return;
-        }
-        var impostoSelecionado = imposto.trim();
-        if (IMPOSTO_OPCOES.indexOf(impostoSelecionado) === -1) {
-          alert('Escolha um dos valores: ' + IMPOSTO_OPCOES.join(', ') + '.');
-          continue;
-        }
-        document.getElementById('imposto').value = impostoSelecionado;
-        break;
-      }
-
-      var lucro = perguntarNumero('Tributação\n\nInforme o lucro desejado (%):', document.getElementById('lucro').value || '0', true);
-      if (lucro === null) {
-        mostrarStatus('Preenchimento da composição por perguntas cancelado.', 'warn');
-        return;
-      }
-      document.getElementById('lucro').value = String(lucro);
-
-      atualizarPainelResumo();
-      irParaEtapa(4);
-
-      if (confirm('Dados preenchidos. Deseja calcular o custo MCC e gerar o extrato agora?')) {
-        var dados = calcular();
-        if (dados && confirm('Deseja salvar a composição no histórico?')) {
-          salvarNaTabela();
-        }
-      } else {
-        mostrarStatus('Dados preenchidos. Use o botão "Calcular custo" quando desejar.', 'ok');
-      }
-    }
-
-    function iniciarAssistenteAutomaticoMobile() {
-      if (window.innerWidth > MOBILE_BREAKPOINT) return;
-      var chaveSessao = 'mcc_assistente_mobile_aberto';
-      try {
-        if (sessionStorage.getItem(chaveSessao)) return;
-        sessionStorage.setItem(chaveSessao, '1');
-      } catch (e) {
-        console.warn('SessionStorage indisponível para controle do assistente mobile:', e);
-      }
-
-      setTimeout(function() {
-        var usinas = obterUsinas();
-        if (!usinas.length) {
-          if (confirm('Modo mobile: deseja cadastrar a usina agora pelo fluxo de perguntas automáticas?')) {
-            iniciarCadastroPorPerguntas();
-          }
-          return;
-        }
-
-        if (confirm('Modo mobile: deseja preencher a composição MCC em janelas de perguntas automáticas?')) {
-          iniciarComposicaoPorPerguntas();
-        }
-      }, MOBILE_WIZARD_DELAY_MS); // Aguarda o primeiro paint no mobile antes de abrir os diálogos.
     }
 
     function interpretarTracoTexto(textoBruto) {
@@ -2370,28 +2121,59 @@
       irParaEtapa(0);
     }
 
-    function configurarNavegacao() {
-      var botoesProximo = document.querySelectorAll('[data-next]');
-      var botoesAnterior = document.querySelectorAll('[data-prev]');
+    function configurarFluxoGuiado() {
+      var materiaisQuantidade = MATERIALS.map(function(item) { return item.key + 'Kg'; });
+      var transporte = [
+        'volumeCaminhao',
+        'volumeCarga',
+        'distancia',
+        'consumo',
+        'precoCombustivel',
+        'pedagio',
+        'taxaServico',
+        'depreciacao',
+        'idaVolta'
+      ];
 
-      for (var i = 0; i < botoesProximo.length; i++) {
-        (function(botao) {
-          botao.onclick = function() {
-            if (!validarEtapa(etapaAtual)) return;
-            limparStatus();
-            irParaEtapa(Number(botao.getAttribute('data-next')));
-          };
-        })(botoesProximo[i]);
-      }
+      configurarSequenciaCampos(
+        ['usinaSelecionada', 'familiaConcreto', 'nomeObra', 'cliente'],
+        {
+          etapaAtual: 0,
+          proximaEtapa: 1,
+          foco: materiaisQuantidade[0],
+          mensagem: 'Dados iniciais preenchidos. Agora informe os materiais por m³.'
+        }
+      );
 
-      for (var j = 0; j < botoesAnterior.length; j++) {
-        (function(botao) {
-          botao.onclick = function() {
-            limparStatus();
-            irParaEtapa(Number(botao.getAttribute('data-prev')));
-          };
-        })(botoesAnterior[j]);
-      }
+      configurarSequenciaCampos(
+        materiaisQuantidade,
+        {
+          etapaAtual: 1,
+          proximaEtapa: 2,
+          foco: transporte[0],
+          mensagem: 'Materiais preenchidos. Agora complete os dados de transporte.'
+        }
+      );
+
+      configurarSequenciaCampos(
+        transporte,
+        {
+          etapaAtual: 2,
+          proximaEtapa: 3,
+          foco: 'imposto',
+          mensagem: 'Transporte preenchido. Agora informe imposto e lucro.'
+        }
+      );
+
+      configurarSequenciaCampos(
+        ['imposto', 'lucro'],
+        {
+          etapaAtual: 3,
+          proximaEtapa: 4,
+          foco: 'btnCalcular',
+          mensagem: 'Etapas concluídas. Clique em "Calcular custo" para gerar o resultado.'
+        }
+      );
     }
 
     window.onload = function() {
@@ -2400,7 +2182,7 @@
       renderizarCamposCadastro();
       renderizarCamposMateriais();
       renderizarEtapas();
-      configurarNavegacao();
+      configurarFluxoGuiado();
       configurarAbasPrincipais();
       renderizarUsinas();
       atualizarSelectUsinas();
@@ -2409,8 +2191,6 @@
 
       document.getElementById('btnSalvarUsina').onclick = salvarCadastroUsina;
       document.getElementById('btnLimparUsina').onclick = limparCadastroUsina;
-      document.getElementById('btnAssistenteUsina').onclick = iniciarCadastroPorPerguntas;
-      document.getElementById('btnAssistenteComposicao').onclick = iniciarComposicaoPorPerguntas;
       document.getElementById('btnImportarTracoPdf').onclick = function() {
         mudarAbaPrincipal('composicao');
         importarTracoPdf();
@@ -2437,6 +2217,7 @@
       document.getElementById('usinaSelecionada').onchange = function() {
         if (this.value) {
           preencherPrecosDaUsina(this.value);
+          mostrarStatus('Usina selecionada. Continue o preenchimento para avançar automaticamente pelas etapas.', 'ok');
         } else {
           atualizarPainelResumo();
         }
@@ -2454,8 +2235,6 @@
       } else {
         mostrarStatus('Aplicação carregada, mas o navegador restringiu o armazenamento local neste modo.', 'warn');
       }
-
-      iniciarAssistenteAutomaticoMobile();
     };
   </script>
 </body>
