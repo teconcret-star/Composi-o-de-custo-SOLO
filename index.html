@@ -540,7 +540,7 @@
               <input type="file" id="arquivoTracoPdf" accept=".pdf,application/pdf">
             </div>
             <div class="actions">
-              <button id="btnImportarTracoPdf" class="secondary" type="button">Importar traço e calcular MCC</button>
+              <button id="btnImportarTracoPdf" class="secondary" type="button">Importar traço e preencher MCC</button>
             </div>
           </div>
           <p class="helper">As quantidades podem ser informadas manualmente. Os preços são preenchidos pela usina selecionada, mas ainda podem ser ajustados se necessário.</p>
@@ -721,7 +721,6 @@
     </section>
   </div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.js"></script>
   <script>
     var MATERIALS = [
       { key: 'cimento', label: 'Cimento', unidade: 'kg/m³' },
@@ -753,6 +752,7 @@
     var MOBILE_WIZARD_DELAY_MS = 300;
     var IMPOSTO_OPCOES = ['4', '5', '6', '7', '8', '9', '10'];
     var abaPrincipalAtiva = 'cadastros';
+    var pdfJsLoadingPromise = null;
     var MATERIAL_ALIASES = {
       cimento: ['cimento'],
       adicao: ['adição', 'adicao'],
@@ -841,10 +841,22 @@
       return campo ? (campo.value.trim() || fallback || nomePadraoInsumo(chave)) : (fallback || nomePadraoInsumo(chave));
     }
 
+    function obterFornecedorComposicaoInsumo(chave, fallback) {
+      var campo = document.getElementById(chave + 'Fornecedor');
+      return campo ? (campo.value.trim() || fallback || '') : (fallback || '');
+    }
+
     function definirNomeComposicaoInsumo(chave, nome) {
       var campo = document.getElementById(chave + 'Nome');
       if (campo) {
         campo.value = nome || nomePadraoInsumo(chave);
+      }
+    }
+
+    function definirFornecedorComposicaoInsumo(chave, fornecedor) {
+      var campo = document.getElementById(chave + 'Fornecedor');
+      if (campo) {
+        campo.value = fornecedor || '';
       }
     }
 
@@ -968,6 +980,31 @@
       return linhas.join('\n');
     }
 
+    async function carregarPdfJs() {
+      if (window.pdfjsLib && window.pdfjsLib.getDocument) {
+        return window.pdfjsLib;
+      }
+
+      if (!pdfJsLoadingPromise) {
+        pdfJsLoadingPromise = import('./vendor/pdfjs/pdf.min.mjs')
+          .then(function(modulo) {
+            var pdfjsLib = modulo && modulo.getDocument ? modulo : (modulo && modulo.default ? modulo.default : null);
+            if (!pdfjsLib || !pdfjsLib.getDocument) {
+              throw new Error('Biblioteca PDF.js inválida.');
+            }
+            pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('./vendor/pdfjs/pdf.worker.min.mjs', window.location.href).href;
+            window.pdfjsLib = pdfjsLib;
+            return pdfjsLib;
+          })
+          .catch(function(erro) {
+            pdfJsLoadingPromise = null;
+            throw erro;
+          });
+      }
+
+      return pdfJsLoadingPromise;
+    }
+
     function mudarAbaPrincipal(aba) {
       abaPrincipalAtiva = aba;
       var botoes = document.querySelectorAll('[data-tab-target]');
@@ -1076,6 +1113,8 @@
             '<input type="text" id="' + item.key + 'Nome" value="' + escapeHtml(item.label) + '" placeholder="Ex.: ' + escapeHtml(item.label) + '">' +
             '<label for="' + item.key + 'Kg">Quantidade (' + escapeHtml(item.unidade) + ')</label>' +
             '<input type="number" id="' + item.key + 'Kg" step="0.01" value="0">' +
+            '<label for="' + item.key + 'Fornecedor">Fornecedor / procedência</label>' +
+            '<input type="text" id="' + item.key + 'Fornecedor" value="" placeholder="Ex.: CSN">' +
             '<label for="' + item.key + 'Preco">Preço (R$/kg)</label>' +
             '<input type="number" id="' + item.key + 'Preco" step="0.01" value="0">' +
           '</div>';
@@ -1399,6 +1438,7 @@
       var textoBase = normalizarTextoBusca(textoBruto).replace(/\s+/g, ' ');
       var quantidades = {};
       var nomes = {};
+      var fornecedores = {};
       var totalEncontrado = 0;
       var chavesEncontradas = {};
       var linhas = String(textoBruto || '')
@@ -1421,10 +1461,11 @@
         brita: 0
       };
 
-      function registrarQuantidade(chave, valorEncontrado, nomeEncontrado) {
+      function registrarQuantidade(chave, valorEncontrado, nomeEncontrado, fornecedorEncontrado) {
         if (!chave || isNaN(valorEncontrado) || valorEncontrado == null || chavesEncontradas[chave]) return;
         quantidades[chave] = valorEncontrado;
         nomes[chave] = nomeEncontrado || nomePadraoInsumo(chave);
+        fornecedores[chave] = fornecedorEncontrado && fornecedorEncontrado !== '-' ? fornecedorEncontrado : '';
         chavesEncontradas[chave] = true;
         if (valorEncontrado > 0) totalEncontrado++;
       }
@@ -1457,19 +1498,21 @@
         if (indicesNumericos.length < 2) return null;
 
         var indiceQuantidade = indicesNumericos[indicesNumericos.length - 2];
+        var indiceUltimoNumero = indicesNumericos[indicesNumericos.length - 1];
         var nomeMaterial = tokensOriginais.slice(0, indiceQuantidade).join(' ').trim();
         var valorQuantidade = parseFloat(String(tokensOriginais[indiceQuantidade]).replace(',', '.'));
+        var fornecedorMaterial = tokensOriginais.slice(indiceUltimoNumero + 1).join(' ').trim();
         var nomeNormalizado = normalizarTextoBusca(nomeMaterial);
         if (!nomeMaterial || isNaN(valorQuantidade)) return null;
 
         if (nomeNormalizado.indexOf('cimento') === 0) {
-          return { chave: 'cimento', valor: valorQuantidade, nome: nomeMaterial };
+          return { chave: 'cimento', valor: valorQuantidade, nome: nomeMaterial, fornecedor: fornecedorMaterial };
         }
         if (nomeNormalizado.indexOf('adicao') === 0) {
-          return { chave: 'adicao', valor: valorQuantidade, nome: nomeMaterial };
+          return { chave: 'adicao', valor: valorQuantidade, nome: nomeMaterial, fornecedor: fornecedorMaterial };
         }
         if (nomeNormalizado.indexOf('agua') === 0) {
-          return { chave: 'agua', valor: valorQuantidade, nome: nomeMaterial };
+          return { chave: 'agua', valor: valorQuantidade, nome: nomeMaterial, fornecedor: fornecedorMaterial };
         }
 
         var familia = nomeNormalizado.split(' ')[0];
@@ -1483,13 +1526,15 @@
         return {
           chave: slots[indiceFamilia],
           valor: valorQuantidade,
-          nome: nomeMaterial
+          nome: nomeMaterial,
+          fornecedor: fornecedorMaterial
         };
       }
 
       for (var indiceMaterial = 0; indiceMaterial < MATERIALS.length; indiceMaterial++) {
         quantidades[MATERIALS[indiceMaterial].key] = 0;
         nomes[MATERIALS[indiceMaterial].key] = MATERIALS[indiceMaterial].label;
+        fornecedores[MATERIALS[indiceMaterial].key] = '';
       }
 
       var emSecaoComposicao = false;
@@ -1508,7 +1553,7 @@
 
         var leituraLinha = interpretarLinhaComposicao(linhas[indiceLinha]);
         if (leituraLinha) {
-          registrarQuantidade(leituraLinha.chave, leituraLinha.valor, leituraLinha.nome);
+          registrarQuantidade(leituraLinha.chave, leituraLinha.valor, leituraLinha.nome, leituraLinha.fornecedor);
         }
       }
 
@@ -1532,7 +1577,8 @@
         registrarQuantidade(
           item.key,
           isNaN(valorEncontrado) || valorEncontrado == null ? 0 : valorEncontrado,
-          nomes[item.key] || item.label
+          nomes[item.key] || item.label,
+          fornecedores[item.key] || ''
         );
       }
 
@@ -1544,6 +1590,7 @@
         },
         quantidades: quantidades,
         nomes: nomes,
+        fornecedores: fornecedores,
         totalEncontrado: totalEncontrado
       };
     }
@@ -1616,18 +1663,13 @@
         return;
       }
 
-      if (!window.pdfjsLib || !window.pdfjsLib.getDocument) {
-        mostrarStatus('Não foi possível carregar o leitor de PDF no navegador.', 'error');
-        return;
-      }
-
       try {
         botao.disabled = true;
         botao.textContent = 'Importando...';
-        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.js';
+        var pdfjsLib = await carregarPdfJs();
 
         var data = await arquivo.arrayBuffer();
-        var pdf = await window.pdfjsLib.getDocument({ data: data }).promise;
+        var pdf = await pdfjsLib.getDocument({ data: data }).promise;
         var textoCompleto = '';
 
         for (var i = 1; i <= pdf.numPages; i++) {
@@ -1646,6 +1688,7 @@
         for (var j = 0; j < MATERIALS.length; j++) {
           var material = MATERIALS[j];
           definirNomeComposicaoInsumo(material.key, leitura.nomes[material.key] || material.label);
+          definirFornecedorComposicaoInsumo(material.key, leitura.fornecedores[material.key] || '');
           document.getElementById(material.key + 'Kg').value = Number(leitura.quantidades[material.key] || 0);
         }
 
@@ -1663,13 +1706,24 @@
         var custosAtualizados = solicitarCustosFaltantes(usinaId);
         atualizarUsinaComDadosDaComposicao(usinaId);
 
-        irParaEtapa(4);
-        var dadosCalculados = calcular();
-        if (dadosCalculados) {
+        var podeCalcularAutomaticamente = valor('volumeCarga') > 0;
+        if (podeCalcularAutomaticamente) {
+          irParaEtapa(4);
+          var dadosCalculados = calcular();
+          if (dadosCalculados) {
+            mostrarStatus(
+              custosAtualizados
+                ? 'Carta traço importada, nomes/custos atualizados na usina e MCC calculado.'
+                : 'Carta traço importada, composição preenchida e custo MCC calculado.',
+              'ok'
+            );
+          }
+        } else {
+          irParaEtapa(2);
           mostrarStatus(
             custosAtualizados
-              ? 'Carta traço importada, nomes/custos atualizados na usina e MCC calculado.'
-              : 'Carta traço importada, composição preenchida e custo MCC calculado.',
+              ? 'Carta traço importada. Quantidades por m³, fornecedores e custos da usina foram preenchidos; complete transporte e impostos para calcular o MCC.'
+              : 'Carta traço importada. Quantidades por m³ e fornecedores foram preenchidos; complete transporte e impostos para calcular o MCC.',
             'ok'
           );
         }
@@ -1677,7 +1731,7 @@
         mostrarStatus('Falha ao importar o PDF do traço: ' + e.message, 'error');
       } finally {
         botao.disabled = false;
-        botao.textContent = 'Importar traço e calcular MCC';
+        botao.textContent = 'Importar traço e preencher MCC';
       }
     }
 
@@ -1710,6 +1764,7 @@
           key: item.key,
           nome: nome,
           label: nome,
+          fornecedor: obterFornecedorComposicaoInsumo(item.key),
           quantidade: quantidade,
           preco: preco,
           subtotal: quantidade * preco
@@ -2001,6 +2056,7 @@
         linhasMateriais +=
           '<tr>' +
             '<td>' + escapeHtml(item.label) + '</td>' +
+            '<td>' + escapeHtml(item.fornecedor || '-') + '</td>' +
             '<td>' + numero(item.quantidade) + '</td>' +
             '<td>' + moeda(item.preco) + '</td>' +
             '<td>' + moeda(item.subtotal) + '</td>' +
@@ -2020,7 +2076,7 @@
           '<div class="summary-item"><strong>Cliente</strong><span>' + escapeHtml(dados.cliente || '-') + '</span></div>' +
         '</div>' +
         '<h3>Materiais por m³</h3>' +
-        '<div class="table-wrap"><table><thead><tr><th>Insumo</th><th>Quantidade</th><th>Preço</th><th>Subtotal</th></tr></thead><tbody>' + linhasMateriais + '</tbody></table></div>' +
+        '<div class="table-wrap"><table><thead><tr><th>Insumo</th><th>Fornecedor</th><th>Quantidade</th><th>Preço</th><th>Subtotal</th></tr></thead><tbody>' + linhasMateriais + '</tbody></table></div>' +
         '<h3>Transporte e entrega</h3>' +
         '<div class="summary-grid">' +
           '<div class="summary-item"><strong>Volume do caminhão</strong><span>' + numero(dados.transporte.volumeCaminhao) + ' m³</span></div>' +
@@ -2108,8 +2164,9 @@
         var item = MATERIALS[i];
         var detalhado = dados.materiaisDetalhados.find(function(material) {
           return material.key === item.key;
-        }) || { quantidade: 0, preco: 0, nome: item.label, label: item.label };
+        }) || { quantidade: 0, preco: 0, nome: item.label, label: item.label, fornecedor: '' };
         definirNomeComposicaoInsumo(item.key, detalhado.nome || detalhado.label || item.label);
+        definirFornecedorComposicaoInsumo(item.key, detalhado.fornecedor || '');
         document.getElementById(item.key + 'Kg').value = Number(detalhado.quantidade || 0);
         document.getElementById(item.key + 'Preco').value = Number(detalhado.preco || 0);
       }
@@ -2195,6 +2252,7 @@
 
       for (var i = 0; i < MATERIALS.length; i++) {
         definirNomeComposicaoInsumo(MATERIALS[i].key, MATERIALS[i].label);
+        definirFornecedorComposicaoInsumo(MATERIALS[i].key, '');
         document.getElementById(MATERIALS[i].key + 'Kg').value = '0';
         document.getElementById(MATERIALS[i].key + 'Preco').value = '0';
       }
