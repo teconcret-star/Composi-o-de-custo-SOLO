@@ -431,7 +431,7 @@
       <h2 class="section-title">1. Cadastro de usinas e custos dos insumos</h2>
       <div class="guide">
         <strong>Como usar</strong>
-        <span>Cadastre primeiro a usina e os custos por unidade. Depois, na composição de custo, basta selecionar a usina para preencher automaticamente os preços dos insumos.</span>
+        <span>Cadastre primeiro a usina, os fornecedores e os custos por unidade. Depois, na composição de custo, basta selecionar a usina para preencher automaticamente os preços dos insumos.</span>
       </div>
 
       <div class="grid-2">
@@ -818,19 +818,14 @@
       return material ? material.label : '';
     }
 
-    function obterNomeCadastroInsumo(chave, fallback) {
-      var campo = document.getElementById('cadastro-' + chave + '-nome');
-      return campo ? (campo.value.trim() || fallback || nomePadraoInsumo(chave)) : (fallback || nomePadraoInsumo(chave));
-    }
-
     function unidadePadraoInsumo(chave) {
       var material = obterMaterialPorChave(chave);
       return material ? material.unidade : 'unidade';
     }
 
-    function obterUnidadeCadastroInsumo(chave, fallback) {
-      var campo = document.getElementById('cadastro-' + chave + '-unidade');
-      return campo ? (campo.value.trim() || fallback || unidadePadraoInsumo(chave)) : (fallback || unidadePadraoInsumo(chave));
+    function obterFornecedorCadastroInsumo(chave, fallback) {
+      var campo = document.getElementById('cadastro-' + chave + '-fornecedor');
+      return campo ? (campo.value.trim() || fallback || '') : (fallback || '');
     }
 
     function obterNomeComposicaoInsumo(chave, fallback) {
@@ -904,11 +899,23 @@
       return unidades;
     }
 
+    function obterFornecedoresUsina(usina) {
+      var fornecedores = {};
+      for (var i = 0; i < MATERIALS.length; i++) {
+        var item = MATERIALS[i];
+        fornecedores[item.key] = usina && usina.fornecedores && usina.fornecedores[item.key]
+          ? String(usina.fornecedores[item.key]).trim()
+          : '';
+      }
+      return fornecedores;
+    }
+
     function normalizarUsina(usina) {
       var registro = usina || {};
       if (!registro.custos) registro.custos = {};
       registro.nomes = obterNomesUsina(registro);
       registro.unidades = obterUnidadesUsina(registro);
+      registro.fornecedores = obterFornecedoresUsina(registro);
       return registro;
     }
 
@@ -1126,10 +1133,8 @@
         html +=
           '<div class="card">' +
             '<h4>' + escapeHtml(item.label) + '</h4>' +
-            '<label for="cadastro-' + item.key + '-nome">Nome do insumo</label>' +
-            '<input type="text" id="cadastro-' + item.key + '-nome" value="' + escapeHtml(item.label) + '" placeholder="Ex.: ' + escapeHtml(item.label) + '">' +
-            '<label for="cadastro-' + item.key + '-unidade">Unidade do insumo</label>' +
-            '<input type="text" id="cadastro-' + item.key + '-unidade" value="' + escapeHtml(item.unidade) + '" placeholder="Ex.: kg/m³">' +
+            '<label for="cadastro-' + item.key + '-fornecedor">Fornecedor / procedência</label>' +
+            '<input type="text" id="cadastro-' + item.key + '-fornecedor" value="" placeholder="Ex.: CSN">' +
             '<label for="cadastro-' + item.key + '-preco">Custo por unidade (R$/unidade)</label>' +
             '<input type="number" id="cadastro-' + item.key + '-preco" step="0.01" value="0">' +
           '</div>';
@@ -1601,11 +1606,20 @@
       return custos;
     }
 
+    function capturarFornecedoresCadastro() {
+      var fornecedores = {};
+      for (var i = 0; i < MATERIALS.length; i++) {
+        var item = MATERIALS[i];
+        fornecedores[item.key] = obterFornecedorCadastroInsumo(item.key);
+      }
+      return fornecedores;
+    }
+
     function capturarNomesCadastro() {
       var nomes = {};
       for (var i = 0; i < MATERIALS.length; i++) {
         var item = MATERIALS[i];
-        nomes[item.key] = obterNomeCadastroInsumo(item.key, item.label);
+        nomes[item.key] = item.label;
       }
       return nomes;
     }
@@ -1614,7 +1628,7 @@
       var unidades = {};
       for (var i = 0; i < MATERIALS.length; i++) {
         var item = MATERIALS[i];
-        unidades[item.key] = obterUnidadeCadastroInsumo(item.key, item.unidade);
+        unidades[item.key] = item.unidade;
       }
       return unidades;
     }
@@ -1651,12 +1665,14 @@
 
       var nomesUsina = obterNomesUsina(usina);
       var unidadesUsina = obterUnidadesUsina(usina);
+      var fornecedoresUsina = obterFornecedoresUsina(usina);
       for (var j = 0; j < MATERIALS.length; j++) {
         var item = MATERIALS[j];
         if (!manterNomes) {
           definirNomeComposicaoInsumo(item.key, nomesUsina[item.key] || item.label);
         }
         definirUnidadeComposicaoInsumo(item.key, unidadesUsina[item.key] || item.unidade);
+        definirFornecedorComposicaoInsumo(item.key, fornecedoresUsina[item.key] || '');
         var campo = document.getElementById(item.key + 'Preco');
         if (campo) {
           campo.value = resolverCustoInsumo(
@@ -1703,6 +1719,7 @@
         dataHora: new Date().toLocaleString('pt-BR'),
         nomes: capturarNomesCadastro(),
         unidades: capturarUnidadesCadastro(),
+        fornecedores: capturarFornecedoresCadastro(),
         custos: capturarCustosCadastro()
       };
 
@@ -1738,10 +1755,10 @@
           var usina = normalizarUsina(usinas[i]);
           document.getElementById('cadastroUsinaId').value = usina.id;
           document.getElementById('cadastroUsinaNome').value = usina.nome;
+          var fornecedoresUsina = obterFornecedoresUsina(usina);
           for (var j = 0; j < MATERIALS.length; j++) {
             var item = MATERIALS[j];
-            document.getElementById('cadastro-' + item.key + '-nome').value = obterNomesUsina(usina)[item.key] || item.label;
-            document.getElementById('cadastro-' + item.key + '-unidade').value = obterUnidadesUsina(usina)[item.key] || item.unidade;
+            document.getElementById('cadastro-' + item.key + '-fornecedor').value = fornecedoresUsina[item.key] || '';
             document.getElementById('cadastro-' + item.key + '-preco').value = Number(usina.custos[item.key] || 0);
           }
           mostrarStatus('Usina carregada para edição.', 'ok');
@@ -1809,8 +1826,7 @@
       document.getElementById('cadastroUsinaId').value = '';
       document.getElementById('cadastroUsinaNome').value = '';
       for (var i = 0; i < MATERIALS.length; i++) {
-        document.getElementById('cadastro-' + MATERIALS[i].key + '-nome').value = MATERIALS[i].label;
-        document.getElementById('cadastro-' + MATERIALS[i].key + '-unidade').value = MATERIALS[i].unidade;
+        document.getElementById('cadastro-' + MATERIALS[i].key + '-fornecedor').value = '';
         document.getElementById('cadastro-' + MATERIALS[i].key + '-preco').value = '0';
       }
     }
