@@ -482,6 +482,17 @@
       button {
         width: 100%;
       }
+
+      .cadastro-actions {
+        flex-direction: row;
+      }
+
+      .cadastro-mobile-btn {
+        width: auto;
+        align-self: flex-start;
+        font-size: 12px;
+        padding: 8px 10px;
+      }
     }
   </style>
 </head>
@@ -527,13 +538,13 @@
           <input type="hidden" id="cadastroUsinaId">
           <p class="helper">Informe o nome da usina e clique em "Editar insumos" para cadastrar fornecedores e custos por unidade.</p>
           <div id="resumoInsumosCadastro" class="insumos-resumo"></div>
-          <div class="actions">
-            <button id="btnAbrirModalInsumos" class="neutral" type="button">Editar insumos da usina</button>
+          <div class="actions cadastro-actions">
+            <button id="btnAbrirModalInsumos" class="neutral cadastro-mobile-btn" type="button">Editar insumos da usina</button>
           </div>
-          <div class="actions">
-            <button id="btnSalvarUsina" class="secondary" type="button">Salvar usina</button>
-            <button id="btnLimparUsina" class="warning" type="button">Limpar cadastro</button>
-            <button id="btnIrParaComposicao" class="primary" type="button">Ir para composição</button>
+          <div class="actions cadastro-actions">
+            <button id="btnSalvarUsina" class="secondary cadastro-mobile-btn" type="button">Salvar usina</button>
+            <button id="btnLimparUsina" class="warning cadastro-mobile-btn" type="button">Limpar cadastro</button>
+            <button id="btnIrParaComposicao" class="primary cadastro-mobile-btn" type="button">Ir para composição</button>
           </div>
         </div>
 
