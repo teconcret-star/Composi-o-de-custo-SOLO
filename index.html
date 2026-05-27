@@ -355,6 +355,77 @@
       margin-bottom: 7px;
     }
 
+    /* Modal de insumos */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.50);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal-box {
+      background: #fff;
+      border-radius: 14px;
+      padding: 24px;
+      width: 94%;
+      max-width: 960px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.22);
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #e6edf3;
+    }
+
+    .modal-header h3 {
+      margin: 0;
+      color: #1b3a57;
+    }
+
+    .btn-fechar-modal {
+      background: none;
+      border: 1px solid #d9e2ec;
+      font-size: 18px;
+      cursor: pointer;
+      color: #5b6b7f;
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-weight: bold;
+    }
+
+    .btn-fechar-modal:hover {
+      background: #eef3f8;
+    }
+
+    .insumos-resumo {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 10px 0;
+    }
+
+    .insumo-chip {
+      font-size: 12px;
+      background: #f2f6fa;
+      border: 1px solid #d9e2ec;
+      border-radius: 8px;
+      padding: 4px 10px;
+      color: #1b3a57;
+    }
+
     @media print {
       body {
         background: white;
@@ -421,6 +492,21 @@
 
     <div id="status" class="status"></div>
 
+    <!-- Modal de cadastro de insumos -->
+    <div id="modalInsumos" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalInsumosTitle" aria-describedby="modalInsumosDesc">
+      <div class="modal-box">
+        <div class="modal-header">
+          <h3 id="modalInsumosTitle">Custos dos insumos da usina</h3>
+          <button class="btn-fechar-modal" type="button" id="btnFecharModalInsumos" title="Fechar">✕</button>
+        </div>
+        <p id="modalInsumosDesc" class="helper">Informe o fornecedor/procedência e o custo por unidade de cada insumo. Os valores serão usados automaticamente na composição ao selecionar a usina.</p>
+        <div id="cadastroCustos" class="grid"></div>
+        <div class="actions" style="margin-top:16px; justify-content: flex-end;">
+          <button class="secondary" type="button" id="btnFecharModalInsumos2">Fechar</button>
+        </div>
+      </div>
+    </div>
+
     <div class="tabs" id="mainTabs">
       <button class="tab-btn active" type="button" data-tab-target="cadastros">Aba 1: Cadastros</button>
       <button class="tab-btn" type="button" data-tab-target="composicao">Aba 2: Composição de custo</button>
@@ -439,8 +525,11 @@
           <label for="cadastroUsinaNome">Nome da usina</label>
           <input type="text" id="cadastroUsinaNome" placeholder="Ex.: Usina Matriz">
           <input type="hidden" id="cadastroUsinaId">
-          <p class="helper">Os preços abaixo serão usados como base automática na composição.</p>
-          <div id="cadastroCustos" class="grid"></div>
+          <p class="helper">Informe o nome da usina e clique em "Editar insumos" para cadastrar fornecedores e custos por unidade.</p>
+          <div id="resumoInsumosCadastro" class="insumos-resumo"></div>
+          <div class="actions">
+            <button id="btnAbrirModalInsumos" class="neutral" type="button">Editar insumos da usina</button>
+          </div>
           <div class="actions">
             <button id="btnSalvarUsina" class="secondary" type="button">Salvar usina</button>
             <button id="btnLimparUsina" class="warning" type="button">Limpar cadastro</button>
@@ -1117,6 +1206,36 @@
       return obterLista(USINAS_STORAGE_KEY).map(normalizarUsina);
     }
 
+    function abrirModalInsumos() {
+      window._modalInsumosTrigger = document.activeElement;
+      document.getElementById('modalInsumos').classList.add('open');
+      // Foca o primeiro campo do modal para acessibilidade
+      var primeiroCampo = document.querySelector('#cadastroCustos input');
+      if (primeiroCampo) primeiroCampo.focus();
+    }
+
+    function fecharModalInsumos() {
+      document.getElementById('modalInsumos').classList.remove('open');
+      atualizarResumoInsumosCadastro();
+      // Retorna o foco ao elemento que abriu o modal
+      var trigger = window._modalInsumosTrigger || document.getElementById('btnAbrirModalInsumos');
+      if (trigger && trigger.focus) trigger.focus();
+    }
+
+    function atualizarResumoInsumosCadastro() {
+      var container = document.getElementById('resumoInsumosCadastro');
+      if (!container) return;
+      var html = '';
+      for (var i = 0; i < MATERIALS.length; i++) {
+        var item = MATERIALS[i];
+        var preco = Number(document.getElementById('cadastro-' + item.key + '-preco').value || 0);
+        if (preco > 0) {
+          html += '<span class="insumo-chip">' + escapeHtml(item.label) + ': ' + moeda(preco) + '</span>';
+        }
+      }
+      container.innerHTML = html || '<span class="muted">Nenhum preço informado ainda. Clique em "Editar insumos da usina".</span>';
+    }
+
     function salvarHistorico(lista) {
       salvarLista(COMPOSICAO_STORAGE_KEY, lista);
     }
@@ -1761,8 +1880,10 @@
             document.getElementById('cadastro-' + item.key + '-fornecedor').value = fornecedoresUsina[item.key] || '';
             document.getElementById('cadastro-' + item.key + '-preco').value = Number(usina.custos[item.key] || 0);
           }
+          atualizarResumoInsumosCadastro();
           mostrarStatus('Usina carregada para edição.', 'ok');
           window.scrollTo({ top: 0, behavior: 'smooth' });
+          abrirModalInsumos();
           return;
         }
       }
@@ -1829,6 +1950,7 @@
         document.getElementById('cadastro-' + MATERIALS[i].key + '-fornecedor').value = '';
         document.getElementById('cadastro-' + MATERIALS[i].key + '-preco').value = '0';
       }
+      atualizarResumoInsumosCadastro();
     }
 
     function capturarDadosFormulario() {
@@ -2259,10 +2381,22 @@
       atualizarSelectUsinas();
       renderizarHistorico();
       atualizarPainelResumo();
+      atualizarResumoInsumosCadastro();
 
       document.getElementById('btnSalvarUsina').onclick = salvarCadastroUsina;
       document.getElementById('btnLimparUsina').onclick = limparCadastroUsina;
       document.getElementById('btnIrParaComposicao').onclick = irParaComposicaoPeloCadastro;
+      document.getElementById('btnAbrirModalInsumos').onclick = abrirModalInsumos;
+      document.getElementById('btnFecharModalInsumos').onclick = fecharModalInsumos;
+      document.getElementById('btnFecharModalInsumos2').onclick = fecharModalInsumos;
+      document.getElementById('modalInsumos').addEventListener('click', function(e) {
+        if (e.target === this) fecharModalInsumos();
+      });
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && document.getElementById('modalInsumos').classList.contains('open')) {
+          fecharModalInsumos();
+        }
+      });
       document.getElementById('btnImportarTracoPdf').onclick = function() {
         mudarAbaPrincipal('composicao');
         importarTracoPdf();
