@@ -603,7 +603,7 @@
 
       <div id="step5" class="step-panel">
         <div class="question-box">
-          <strong>Etapa 5:</strong> calcular o custo agora e gerar o extrato completo.
+          <strong>Etapa 5:</strong> deseja calcular o custo agora e gerar o extrato completo?
         </div>
         <div class="grid-2">
           <div class="card">
@@ -2217,9 +2217,7 @@
       document.getElementById('usinaSelecionada').onchange = function() {
         if (this.value) {
           preencherPrecosDaUsina(this.value);
-          if (etapaAtual === 0) {
-            mostrarStatus('Usina selecionada. Continue preenchendo os dados básicos para avançar automaticamente.', 'ok');
-          }
+          mostrarStatus('Usina selecionada. Continue o preenchimento para avançar automaticamente pelas etapas.', 'ok');
         } else {
           atualizarPainelResumo();
         }
